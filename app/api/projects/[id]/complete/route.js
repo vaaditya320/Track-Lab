@@ -1,9 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
-import { upload } from "../../../../lib/upload";
+// import { upload } from "../../../../../lib/upload";
 import { writeFile } from "fs/promises";
-import { NextResponse } from "next/server";
+// import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
