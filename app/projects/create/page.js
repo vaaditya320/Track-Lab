@@ -45,7 +45,7 @@ export default function CreateProject() {
       const response = await axios.post('/api/projects/create', projectData);
 
       if (response.status === 201) {
-        router.push(`/projects/${response.data.project.id}`);
+        router.push(`/`);
       }
     } catch (error) {
       setError("There was an error creating the project.");

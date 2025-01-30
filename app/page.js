@@ -1,14 +1,16 @@
-'use client';
+'use client';  // Make sure this file is treated as a client-side component
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, Fragment } from "react";
 import Link from "next/link";
 import axios from "axios"; // Import axios for API calls
+import { useRouter } from "next/navigation"; // Using next/navigation to handle routing
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [projects, setProjects] = useState([]);
   const [error, setError] = useState(""); // To handle any errors during the fetch
+  const router = useRouter(); // Client-side router
 
   // Fetch projects if user is authenticated
   useEffect(() => {
@@ -40,18 +42,10 @@ export default function Home() {
       });
   };
 
-  // Function to handle submitting the project
+  // Function to handle redirecting to the submit page
   const handleSubmitProject = (projectId) => {
-    axios
-      .post(`/api/projects/${projectId}/complete`)
-      .then((response) => {
-        console.log("Project submitted successfully:", response.data);
-        // Optionally, re-fetch the projects after submission
-        setProjects(projects.filter((project) => project.id !== projectId));
-      })
-      .catch((error) => {
-        console.error("Error submitting project:", error);
-      });
+    // Redirect to the submit page instead of sending the POST request directly
+    router.push(`/projects/${projectId}/submit`);
   };
 
   return (
@@ -86,7 +80,7 @@ export default function Home() {
                         </button>
                         <button
                           className="bg-yellow-500 text-white px-4 py-2 rounded"
-                          onClick={() => handleSubmitProject(project.id)}
+                          onClick={() => handleSubmitProject(project.id)} // Redirect to submit page
                         >
                           Submit
                         </button>

@@ -1,52 +1,61 @@
 import { PrismaClient } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../auth/[...nextauth]/route";
-// import { upload } from "../../../../../lib/upload";
+import { NextResponse } from "next/server";
 import { writeFile } from "fs/promises";
-// import { NextResponse } from "next/server";
+import path from "path";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient(); // Initialize PrismaClient
 
 export async function POST(req, { params }) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
-
   try {
-    const formData = await req.formData();
+    const projectId = params.id; // Extract project ID
+    const formData = await req.formData(); // Parse form data
+
     const summary = formData.get("summary");
-    const file = formData.get("projectPhoto");
+    const file = formData.get("photo");
 
-    if (!summary || !file) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 });
+    if (!summary) {
+      return NextResponse.json({ error: "Summary is required" }, { status: 400 });
     }
 
-    // Ensure the file is an image
-    if (!file.type.startsWith("image/")) {
-      return new Response(JSON.stringify({ error: "Invalid file type" }), { status: 400 });
+    let photoFilename = null;
+
+    if (file && file.name) {
+      // Save the uploaded photo
+      const uploadsDir = path.join(process.cwd(), "public/uploads");
+      const uniqueName = `${Date.now()}-${file.name}`;
+      const filePath = path.join(uploadsDir, uniqueName);
+
+      await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+      photoFilename = uniqueName; // Store filename for DB
     }
 
-    // Read file as a buffer and save it
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const filePath = `public/uploads/${Date.now()}-${file.name}`;
-    await writeFile(filePath, buffer);
+    console.log("🔍 Checking if project exists in DB...");
+    const existingProject = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
 
-    // Update the project in the database
-    const project = await prisma.project.update({
-      where: { id: params.id, leaderId: session.user.id },
+    if (!existingProject) {
+      console.error("❌ Project not found!");
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    console.log("✅ Project found. Updating...");
+    const updatedProject = await prisma.project.update({
+      where: { id: projectId },
       data: {
         summary,
-        projectPhoto: filePath.replace("public/", ""), // Store relative path
+        projectPhoto: photoFilename || existingProject.projectPhoto, // Preserve existing photo if not updated
         status: "SUBMITTED",
       },
     });
 
-    return new Response(JSON.stringify({ message: "Project completed", project }), { status: 200 });
+    console.log("✅ Project updated successfully:", updatedProject);
+    return NextResponse.json(updatedProject, { status: 200 });
+
   } catch (error) {
-    console.error("Error completing project:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
+    console.error("❌ Error updating project:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } finally {
+    await prisma.$disconnect(); // Close Prisma connection
   }
 }
