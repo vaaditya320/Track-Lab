@@ -1,4 +1,4 @@
-generator client {
+generator client { 
   provider = "prisma-client-js"
 }
 
@@ -12,19 +12,19 @@ model User {
   name      String
   regId     String   @unique
   email     String   @unique
-  projects  Project[]
+  projects  Project[] // The relation to projects remains unchanged
 }
 
 model Project {
   id           String   @id @default(uuid())
-  leaderId     String
-  title        String
-  teamMembers  String   // JSON stringified array
-  components   String   // Text field for borrowed components
-  summary      String?  // Nullable
-  projectPhoto String?  // Nullable (image file path)
-  status       Status   @default(PARTIAL)
-  leader       User     @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+  leaderId     String   // Foreign key to User
+  title        String   // Project title
+  teamMembers  String   // JSON stringified array for team members
+  components   String   // Text for borrowed components
+  summary      String?  // Nullable summary
+  projectPhoto String?  // Nullable project photo (image path)
+  status       Status   @default(PARTIAL) // Default status is PARTIAL
+  leader       User     @relation(fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
 }
 
 enum Status {
