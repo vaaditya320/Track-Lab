@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  regId     String   @unique
+  email     String   @unique
+  projects  Project[]
+}
+
+model Project {
+  id           String   @id @default(uuid())
+  leaderId     String
+  title        String
+  teamMembers  String   // JSON stringified array
+  components   String   // Text field for borrowed components
+  summary      String?  // Nullable
+  projectPhoto String?  // Nullable (image file path)
+  status       Status   @default(PARTIAL)
+  leader       User     @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+}
+
+enum Status {
+  PARTIAL
+  SUBMITTED
+}
