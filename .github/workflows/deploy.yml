@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # You can change this to any branch you'd like to trigger from
+      - main  # Trigger this workflow on push to the main branch
 
 jobs:
   deploy:
@@ -30,9 +30,14 @@ jobs:
         GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       run: |
-        # Connect to EC2, clean the old .next build, update the .env file with the secrets, install dependencies, build and start the app
+        # Connect to EC2, clone or pull the repo, clean the old .next build, update the .env file, install dependencies, build, and start the app
         ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$SERVER_IP << 'EOF'
-          cd /var/www/nextjs-app &&
+          # Create the directory if it doesn't exist
+          mkdir -p /var/www/nextjs-app &&
+          cd /var/www/nextjs-app ||
+          # If the repo is not already cloned, clone it
+          git clone https://github.com/yourusername/yourrepo.git . &&
+          git pull origin main &&
           rm -rf .next &&  # Remove old .next build
           echo 'DATABASE_URL=${{ secrets.DATABASE_URL }}' > .env &&
           echo 'GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}' >> .env &&
