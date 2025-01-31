@@ -3,60 +3,108 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import nodemailer from "nodemailer";
-import { writeFile, unlink } from "fs/promises"; // Async file operations
-import fs from "fs"; // Synchronous file operations
+import { writeFile, unlink } from "fs/promises";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import fs from "fs";
 import path from "path";
 
 const prisma = new PrismaClient();
 
-// Function to generate PDF with project details and photo (if applicable)
+// AWS S3 Configuration
+const s3 = new S3Client({
+  region: "ap-south-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+});
+
+// Constants
+const BUCKET_NAME = "cache-buster";
+
+// Fetch image from S3
+async function fetchImageFromS3(s3Key) {
+  try {
+    if (!s3Key) throw new Error("S3 key is missing");
+
+    console.log(`Fetching image from S3: ${s3Key}`);
+
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: s3Key, // Using the key directly from the database
+    });
+
+    const { Body } = await s3.send(command);
+
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      Body.on("data", (chunk) => chunks.push(chunk));
+      Body.on("end", () => resolve(Buffer.concat(chunks)));
+      Body.on("error", reject);
+    });
+  } catch (error) {
+    console.error("❌ Error fetching image from S3:", error);
+    throw new Error("Failed to fetch project image from S3");
+  }
+}
+
+// Generate PDF
 async function generateProjectPDF(project, leaderName) {
   try {
-    // Ensure the "reports" directory exists
     const reportsDir = path.join(process.cwd(), "public", "reports");
-    if (!fs.existsSync(reportsDir)) {
-      fs.mkdirSync(reportsDir, { recursive: true });
-    }
+    if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
 
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([600, 800]);
+    const page = pdfDoc.addPage([595, 842]); // A4 size
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    page.drawText("Project Report", { x: 50, y: height - 50, size: 20, font, color: rgb(0, 0, 0) });
-    page.drawText(`Title: ${project.title}`, { x: 50, y: height - 80, size: 14, font });
-    page.drawText(`Leader: ${leaderName}`, { x: 50, y: height - 110, size: 14, font });
-    page.drawText(`Team Members: ${JSON.parse(project.teamMembers).join(", ")}`, { x: 50, y: height - 140, size: 14, font });
+    let textY = height - 50;
+    page.drawText("Project Report", { x: 50, y: textY, size: 20, font, color: rgb(0, 0, 0) });
+    textY -= 30;
+
+    const details = [
+      `Title: ${project.title}`,
+      `Leader: ${leaderName}`,
+      `Team Members: ${JSON.parse(project.teamMembers).join(", ")}`,
+      `Status: ${project.status}`,
+    ];
 
     if (project.status === "SUBMITTED") {
-      page.drawText(`Summary: ${project.summary}`, { x: 50, y: height - 180, size: 12, font });
-      page.drawText(`Components: ${project.components}`, { x: 50, y: height - 210, size: 12, font });
-
-      // If project photo exists, embed it in the PDF
-      if (project.projectPhoto) {
-        const imagePath = path.join(process.cwd(), "public/uploads", project.projectPhoto);
-        if (fs.existsSync(imagePath)) {
-          const imageBytes = fs.readFileSync(imagePath);
-          let image;
-          if (project.projectPhoto.endsWith(".png")) {
-            image = await pdfDoc.embedPng(imageBytes);
-          } else if (project.projectPhoto.endsWith(".jpg") || project.projectPhoto.endsWith(".jpeg")) {
-            image = await pdfDoc.embedJpg(imageBytes);
-          }
-
-          if (image) {
-            const imgDims = image.scale(0.5);
-            page.drawImage(image, {
-              x: 50,
-              y: height - 400,
-              width: imgDims.width,
-              height: imgDims.height,
-            });
-          }
-        }
-      }
+      details.push(`Summary: ${project.summary}`, `Components: ${project.components}`);
     } else {
-      page.drawText("Status: Partial (More details required)", { x: 50, y: height - 180, size: 12, font });
+      details.push("Status: Partial (More details required)");
+    }
+
+    const lineHeight = 16;
+    for (const line of details) {
+      page.drawText(line, { x: 50, y: textY, size: 12, font });
+      textY -= lineHeight;
+    }
+
+    if (project.status === "SUBMITTED" && project.projectPhoto) {
+      try {
+        const imageBuffer = await fetchImageFromS3(project.projectPhoto);
+        let image;
+
+        if (project.projectPhoto.endsWith(".png")) {
+          image = await pdfDoc.embedPng(imageBuffer);
+        } else if (project.projectPhoto.endsWith(".jpg") || project.projectPhoto.endsWith(".jpeg")) {
+          image = await pdfDoc.embedJpg(imageBuffer);
+        }
+
+        if (image) {
+          const maxImgWidth = width - 100;
+          const maxImgHeight = height / 3;
+          const imgDims = image.scaleToFit(maxImgWidth, maxImgHeight);
+
+          const imgX = (width - imgDims.width) / 2;
+          const imgY = 50;
+          page.drawImage(image, { x: imgX, y: imgY, width: imgDims.width, height: imgDims.height });
+        }
+      } catch (error) {
+        console.error("❌ Error embedding image:", error);
+      }
     }
 
     const pdfBytes = await pdfDoc.save();
@@ -70,14 +118,14 @@ async function generateProjectPDF(project, leaderName) {
   }
 }
 
-// Function to send email with attached PDF
+// Send email with PDF
 async function sendEmailWithPDF(userEmail, pdfPath) {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "vaaditya320@gmail.com",  // Replace with your email
-        pass: process.env.GMAIL_APP_PASSWORD,  // Use an app password from Google
+        user: "vaaditya320@gmail.com",
+        pass: process.env.GMAIL_APP_PASSWORD,
       },
     });
 
@@ -89,34 +137,27 @@ async function sendEmailWithPDF(userEmail, pdfPath) {
       attachments: [{ filename: "Project-Report.pdf", path: pdfPath }],
     });
 
-    await unlink(pdfPath); // Delete the file after sending
+    await unlink(pdfPath);
   } catch (error) {
     console.error("❌ Error sending email:", error);
     throw new Error("Email sending failed");
   }
 }
 
-// API Route Handler
-export async function GET(req, context) {
+// API Route
+export async function GET(req, { params }) {
   try {
-    const { id } = context.params; // Ensure params are accessed safely
-
-    if (!id) {
-      return new Response(JSON.stringify({ error: "Invalid project ID" }), { status: 400 });
-    }
+    const { id } = params;
+    if (!id) return new Response(JSON.stringify({ error: "Invalid project ID" }), { status: 400 });
 
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    }
+    if (!session) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
     const project = await prisma.project.findUnique({
       where: { id, leaderId: session.user.id },
     });
 
-    if (!project) {
-      return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
-    }
+    if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
 
     const leaderName = session.user.name;
     const pdfPath = await generateProjectPDF(project, leaderName);

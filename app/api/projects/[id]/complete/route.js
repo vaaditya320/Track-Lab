@@ -1,15 +1,29 @@
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import path from "path";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-const prisma = new PrismaClient(); // Initialize PrismaClient
+const prisma = new PrismaClient();
+
+// AWS S3 Configuration
+const s3 = new S3Client({
+  region: "ap-south-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+});
+
+const BUCKET_NAME = "cache-buster";
+const FOLDER_NAME = "tracklab-project-pics/";
 
 export async function POST(req, { params }) {
   try {
-    const projectId = params.id; // Extract project ID
-    const formData = await req.formData(); // Parse form data
+    const projectId = params.id;
+    if (!projectId) {
+      return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
+    }
 
+    const formData = await req.formData();
     const summary = formData.get("summary");
     const file = formData.get("photo");
 
@@ -20,42 +34,46 @@ export async function POST(req, { params }) {
     let photoFilename = null;
 
     if (file && file.name) {
-      // Save the uploaded photo
-      const uploadsDir = path.join(process.cwd(), "public/uploads");
       const uniqueName = `${Date.now()}-${file.name}`;
-      const filePath = path.join(uploadsDir, uniqueName);
+      const s3Key = `${FOLDER_NAME}${uniqueName}`;
 
-      await writeFile(filePath, Buffer.from(await file.arrayBuffer()));
-      photoFilename = uniqueName; // Store filename for DB
+      // Upload file to S3
+      const uploadParams = {
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+        Body: Buffer.from(await file.arrayBuffer()),
+        ContentType: file.type,
+      };
+
+      await s3.send(new PutObjectCommand(uploadParams));
+      photoFilename = s3Key;
     }
 
-    console.log("🔍 Checking if project exists in DB...");
+    // Check if project exists
     const existingProject = await prisma.project.findUnique({
       where: { id: projectId },
     });
 
     if (!existingProject) {
-      console.error("❌ Project not found!");
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    console.log("✅ Project found. Updating...");
+    // Update project in DB
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
       data: {
         summary,
-        projectPhoto: photoFilename || existingProject.projectPhoto, // Preserve existing photo if not updated
+        projectPhoto: photoFilename || existingProject.projectPhoto,
         status: "SUBMITTED",
       },
     });
 
-    console.log("✅ Project updated successfully:", updatedProject);
     return NextResponse.json(updatedProject, { status: 200 });
 
   } catch (error) {
-    console.error("❌ Error updating project:", error);
+    console.error("Error updating project:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   } finally {
-    await prisma.$disconnect(); // Close Prisma connection
+    await prisma.$disconnect();
   }
 }

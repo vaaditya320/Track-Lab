@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function GET(req, { params }) {
   try {
-    const { id } = params; // Get the project ID from the URL path
+    const { id } = await params; // Get the project ID from the URL path
 
     if (!id) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });

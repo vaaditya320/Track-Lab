@@ -64,7 +64,7 @@ jobs:
 
           # Install dependencies & build
           echo "Installing dependencies..."
-          npm install --no-optional --production --max-old-space-size=512
+          npm install --max-old-space-size=512
 
           echo "Building application..."
           npm run build
