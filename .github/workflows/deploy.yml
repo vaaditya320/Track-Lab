@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Trigger this workflow on push to the main branch
+      - main  # Trigger on push to the main branch
 
 jobs:
   deploy:
@@ -22,7 +22,6 @@ jobs:
       env:
         SERVER_IP: ${{ secrets.SERVER_IP }}
         USER: ${{ secrets.USER }}
-        PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -30,23 +29,51 @@ jobs:
         GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       run: |
-        # Connect to EC2, clone or pull the repo, clean the old .next build, update the .env file, install dependencies, build, and start the app
         ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$SERVER_IP << 'EOF'
-          # Create the directory if it doesn't exist
-          mkdir -p /var/www/nextjs-app &&
-          cd /var/www/nextjs-app ||
-          # If the repo is not already cloned, clone it
-          git clone https://github.com/yourusername/yourrepo.git . &&
-          git pull origin main &&
-          rm -rf .next &&  # Remove old .next build
-          echo 'DATABASE_URL=${DATABASE_URL}' > .env &&
-          echo 'GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}' >> .env &&
-          echo 'GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}' >> .env &&
-          echo 'NEXTAUTH_SECRET=${NEXTAUTH_SECRET}' >> .env &&
-          echo 'GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}' >> .env &&
-          echo 'NEXTAUTH_URL=${NEXTAUTH_URL}' >> .env &&
-          npm install --max-old-space-size=512 &&
-          npm run build &&
-          sudo systemctl reload nginx &&
-          nohup npm start -- -p 5090 > nextjs.log 2>&1 &
+          # Ensure projects directory exists
+          mkdir -p ~/projects
+          cd ~/projects
+
+          # Clone repo if it doesn't exist
+          if [ ! -d "Track-Lab" ]; then
+            echo "Cloning repository..."
+            git clone https://github.com/vaaditya320/Track-Lab.git
+          fi
+
+          cd Track-Lab
+
+          # Fetch latest changes
+          echo "Pulling latest changes..."
+          git reset --hard origin/main
+          git pull origin main
+
+          # Remove old build only if it exists
+          if [ -d ".next" ]; then
+            echo "Removing old build..."
+            rm -rf .next
+          fi
+
+          # Create .env file with only secrets
+          echo "Setting up environment variables..."
+          cat <<EOT > .env
+          DATABASE_URL=${DATABASE_URL}
+          GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+          NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+          GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+          NEXTAUTH_URL=${NEXTAUTH_URL}
+          EOT
+
+          # Install dependencies & build
+          echo "Installing dependencies..."
+          npm install --max-old-space-size=512
+
+          echo "Building application..."
+          npm run build
+
+          # Restart server
+          echo "Restarting server..."
+          nohup npm start -- -p 5090 > server.log 2>&1 &
+
+          echo "Deployment completed!"
         EOF
