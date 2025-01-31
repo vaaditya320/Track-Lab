@@ -1,10 +1,9 @@
-import NextAuth from "next-auth";
+import NextAuth from "next-auth"; 
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Define authOptions and export it
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -20,9 +19,9 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user }) {
       if (!user.email.endsWith("@poornima.org")) {
-        return false; // Restrict login to college email IDs
+        return false; // Restrict login to college emails
       }
 
       try {
@@ -47,7 +46,7 @@ export const authOptions = {
       }
     },
 
-    async session({ session, user }) {
+    async session({ session }) {
       const dbUser = await prisma.user.findUnique({
         where: { email: session.user.email },
       });
@@ -59,12 +58,18 @@ export const authOptions = {
 
       return session;
     },
+
+    async redirect({ url, baseUrl }) {
+      return baseUrl; // Redirect to the app's base URL
+    },
   },
+
+  session: {
+    maxAge: 24 * 60 * 60, // Set session timeout to 1 day
+  },
+
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// Export GET handler using authOptions
 export const GET = (req, res) => NextAuth(req, res, authOptions);
-
-// Export POST handler using authOptions
 export const POST = (req, res) => NextAuth(req, res, authOptions);
