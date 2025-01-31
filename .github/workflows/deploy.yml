@@ -31,17 +31,17 @@ jobs:
         NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
       run: |
         # Connect to EC2, clean the old .next build, update the .env file with the secrets, install dependencies, build and start the app
-        ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$SERVER_IP "
-        cd /var/www/nextjs-app &&
-        rm -rf .next &&  # Remove old .next build
-        echo 'DATABASE_URL=${{ secrets.DATABASE_URL }}' > .env &&
-        echo 'GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}' >> .env &&
-        echo 'GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}' >> .env &&
-        echo 'NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}' >> .env &&
-        echo 'GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}' >> .env &&
-        echo 'NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}' >> .env &&
-        npm install --max-old-space-size=512 &&
-        npm run build &&
-        sudo systemctl reload nginx &&
-        nohup npm start -- -p 5090 > nextjs.log 2>&1 &
-      "
+        ssh -o StrictHostKeyChecking=no -i private_key.pem $USER@$SERVER_IP << 'EOF'
+          cd /var/www/nextjs-app &&
+          rm -rf .next &&  # Remove old .next build
+          echo 'DATABASE_URL=${{ secrets.DATABASE_URL }}' > .env &&
+          echo 'GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}' >> .env &&
+          echo 'GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}' >> .env &&
+          echo 'NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}' >> .env &&
+          echo 'GMAIL_APP_PASSWORD=${{ secrets.GMAIL_APP_PASSWORD }}' >> .env &&
+          echo 'NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}' >> .env &&
+          npm install --max-old-space-size=512 &&
+          npm run build &&
+          sudo systemctl reload nginx &&
+          nohup npm start -- -p 5090 > nextjs.log 2>&1 &
+        EOF
