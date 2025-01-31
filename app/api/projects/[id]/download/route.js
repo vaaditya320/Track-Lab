@@ -31,15 +31,17 @@ async function fetchImageFromS3(s3Key) {
 
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: s3Key, // Using the key directly from the database
+      Key: s3Key,
     });
 
-    const { Body } = await s3.send(command);
+    const { Body, ContentType } = await s3.send(command);
+
+    console.log("Fetched image content type:", ContentType);
 
     return new Promise((resolve, reject) => {
       const chunks = [];
       Body.on("data", (chunk) => chunks.push(chunk));
-      Body.on("end", () => resolve(Buffer.concat(chunks)));
+      Body.on("end", () => resolve({ buffer: Buffer.concat(chunks), contentType: ContentType }));
       Body.on("error", reject);
     });
   } catch (error) {
@@ -82,15 +84,19 @@ async function generateProjectPDF(project, leaderName) {
       textY -= lineHeight;
     }
 
+    // Embed Image if available
     if (project.status === "SUBMITTED" && project.projectPhoto) {
       try {
-        const imageBuffer = await fetchImageFromS3(project.projectPhoto);
-        let image;
+        const { buffer: imageBuffer, contentType } = await fetchImageFromS3(project.projectPhoto);
+        console.log("Fetched image buffer size:", imageBuffer.length);
 
-        if (project.projectPhoto.endsWith(".png")) {
+        let image;
+        if (contentType === "image/png") {
           image = await pdfDoc.embedPng(imageBuffer);
-        } else if (project.projectPhoto.endsWith(".jpg") || project.projectPhoto.endsWith(".jpeg")) {
+        } else if (contentType === "image/jpeg" || contentType === "image/jpg") {
           image = await pdfDoc.embedJpg(imageBuffer);
+        } else {
+          console.error("❌ Unsupported image format:", contentType);
         }
 
         if (image) {
@@ -101,6 +107,8 @@ async function generateProjectPDF(project, leaderName) {
           const imgX = (width - imgDims.width) / 2;
           const imgY = 50;
           page.drawImage(image, { x: imgX, y: imgY, width: imgDims.width, height: imgDims.height });
+        } else {
+          console.error("❌ Failed to embed image into PDF");
         }
       } catch (error) {
         console.error("❌ Error embedding image:", error);
