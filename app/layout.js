@@ -1,9 +1,11 @@
-'use client'; // Ensure this is a client component
+"use client"; // Ensure this is a client component
 
 import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import { Fragment } from "react";
-import './globals.css';
+import { AppBar, Toolbar, Typography, Button, Container } from "@mui/material";
+import { motion } from "framer-motion";
+import "./globals.css";
 
 // Wrap the whole app with the SessionProvider
 export default function Layout({ children }) {
@@ -13,24 +15,40 @@ export default function Layout({ children }) {
         <body>
           <Fragment>
             {/* Header */}
-            <header className="bg-gray-800 text-white p-4">
-              <div className="container mx-auto flex justify-between items-center">
-                <h1 className="text-xl font-bold">
-                  <Link href="/">TrackLab</Link>
-                </h1>
+            <AppBar position="static" color="primary" elevation={4}>
+              <Toolbar>
+                <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                  <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+                    TrackLab
+                  </Link>
+                </Typography>
                 <UserHeader />
-              </div>
-            </header>
+              </Toolbar>
+            </AppBar>
 
-            {/* Main content */}
-            <main className="container mx-auto p-4">{children}</main>
+            {/* Main content with animation */}
+            <motion.main
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Container sx={{ py: 4 }}>{children}</Container>
+            </motion.main>
 
-            {/* Footer (Optional) */}
-            <footer className="bg-gray-800 text-white p-4 mt-4">
-              <div className="container mx-auto text-center">
-                <p>&copy; 2025 TrackLab. All rights reserved.</p>
-              </div>
-            </footer>
+            {/* Footer */}
+            <motion.footer
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <AppBar position="static" color="primary" elevation={4} sx={{ mt: 4 }}>
+                <Toolbar>
+                  <Typography variant="body2" sx={{ flexGrow: 1, textAlign: "center" }}>
+                    &copy; 2025 TrackLab. All rights reserved.
+                  </Typography>
+                </Toolbar>
+              </AppBar>
+            </motion.footer>
           </Fragment>
         </body>
       </html>
@@ -38,28 +56,26 @@ export default function Layout({ children }) {
   );
 }
 
-// A new functional component to handle session management in the header
+// User session handling component
 function UserHeader() {
   const { data: session, status } = useSession();
 
-  return (
+  return status === "authenticated" ? (
     <div>
-      {status === "authenticated" ? (
-        <div className="flex items-center">
-          <span className="mr-4">Welcome, {session?.user?.name}</span>
-          <Link href="/api/auth/signout">
-            <button className="bg-red-500 text-white px-4 py-2 rounded">
-              Sign Out
-            </button>
-          </Link>
-        </div>
-      ) : (
-        <Link href="/api/auth/signin">
-          <button className="bg-blue-500 text-white px-4 py-2 rounded">
-            Sign In
-          </button>
-        </Link>
-      )}
+      <Typography variant="body1" sx={{ mr: 2 }}>
+        Welcome, {session?.user?.name}
+      </Typography>
+      <Link href="/api/auth/signout">
+        <Button variant="contained" color="secondary">
+          Sign Out
+        </Button>
+      </Link>
     </div>
+  ) : (
+    <Link href="/api/auth/signin">
+      <Button variant="contained" color="success">
+        Sign In
+      </Button>
+    </Link>
   );
 }

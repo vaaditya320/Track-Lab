@@ -1,24 +1,29 @@
-'use client';  // Ensure this file is treated as a client-side component
+"use client"; 
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { 
+  Container, Typography, Button, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, CircularProgress 
+} from "@mui/material";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [projects, setProjects] = useState([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(null); // Track loading per project
+  const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const router = useRouter();
 
   useEffect(() => {
     if (status === "authenticated") {
       axios
         .get("/api/projects", { headers: { Authorization: `Bearer ${session.user.id}` } })
-        .then((response) => {
-          setProjects(response.data); // Use the response data directly
-        })
+        .then((response) => setProjects(response.data))
         .catch((error) => {
           console.error("Error fetching projects:", error);
           setError("There was an issue fetching your projects.");
@@ -26,16 +31,22 @@ export default function Home() {
     }
   }, [status, session?.user.id]);
 
-  const handleDownloadSummary = (projectId) => {
-    axios
-      .get(`/api/projects/${projectId}/download`)
-      .then(() => {
-        alert("The project summary has been emailed to you.");
-      })
-      .catch((error) => {
-        console.error("Error downloading summary:", error);
-        alert("There was an issue downloading the summary.");
-      });
+  const handleDownloadSummary = async (projectId) => {
+    setLoading(projectId); // Show loader for this project
+
+    try {
+      const response = await axios.get(`/api/projects/${projectId}/download`);
+      if (response.status === 200) {
+        setToast({ open: true, message: "The project summary has been emailed to you.", severity: "success" });
+      } else {
+        throw new Error("Download failed");
+      }
+    } catch (error) {
+      console.error("Error downloading summary:", error);
+      setToast({ open: true, message: "There was an issue downloading the summary.", severity: "error" });
+    } finally {
+      setLoading(null); // Remove loading state
+    }
   };
 
   const handleSubmitProject = (projectId) => {
@@ -43,75 +54,106 @@ export default function Home() {
   };
 
   return (
-    <Fragment>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Welcome to TrackLab</h1>
-        
-        {status === "authenticated" ? (
-          <div>
-            <p className="text-lg mb-4">Welcome, {session.user.name}</p>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          Welcome to TrackLab
+        </Typography>
 
-            <Link href="/projects/create">
-              <button className="bg-green-500 text-white px-4 py-2 rounded mb-4">
-                Create Project
-              </button>
+        {status === "authenticated" ? (
+          <>
+            <Typography variant="h6" color="textSecondary" sx={{ mb: 3 }}>
+              Hello, {session.user.name}
+            </Typography>
+
+            <Link href="/projects/create" passHref>
+              <Button variant="contained" color="success" sx={{ mb: 3 }}>
+                Create New Project
+              </Button>
             </Link>
 
-            {error && <p className="text-red-500">{error}</p>}
+            {error && (
+              <Typography color="error" sx={{ mb: 3 }}>
+                {error}
+              </Typography>
+            )}
 
             {projects.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-200">
-                      <th className="border border-gray-300 px-4 py-2">S. No.</th>
-                      <th className="border border-gray-300 px-4 py-2">Project Name</th>
-                      <th className="border border-gray-300 px-4 py-2">Status</th>
-                      <th className="border border-gray-300 px-4 py-2">Download Summary</th>
-                      <th className="border border-gray-300 px-4 py-2">Submit</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: "#eeeeee" }}>
+                      <TableCell><strong>S. No.</strong></TableCell>
+                      <TableCell><strong>Project Name</strong></TableCell>
+                      <TableCell><strong>Status</strong></TableCell>
+                      <TableCell><strong>Download Summary</strong></TableCell>
+                      <TableCell><strong>Submit</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {projects.map((project, index) => (
-                      <tr key={project.id} className="text-center border border-gray-300">
-                        <td className="border border-gray-300 px-4 py-2">{index + 1}</td>
-                        <td className="border border-gray-300 px-4 py-2">{project.title}</td>
-                        <td className="border border-gray-300 px-4 py-2">
+                      <TableRow key={project.id} hover>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{project.title}</TableCell>
+                        <TableCell>
                           {project.status === "PARTIAL" ? "Partial" : "Submitted"}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          <button
-                            className="bg-blue-500 text-white px-4 py-2 rounded"
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="contained"
+                            color="primary"
                             onClick={() => handleDownloadSummary(project.id)}
+                            disabled={loading === project.id} // Disable if loading
                           >
-                            Download
-                          </button>
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
+                            {loading === project.id ? <CircularProgress size={24} color="inherit" /> : "Download"}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
                           {project.status === "PARTIAL" ? (
-                            <button
-                              className="bg-yellow-500 text-white px-4 py-2 rounded"
+                            <Button
+                              variant="contained"
+                              color="warning"
                               onClick={() => handleSubmitProject(project.id)}
                             >
                               Submit
-                            </button>
+                            </Button>
                           ) : (
-                            <span className="text-gray-500">Already Submitted</span>
+                            <Typography color="textSecondary">Already Submitted</Typography>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
+              </TableContainer>
             ) : (
-              <p className="mt-4 text-gray-600">No projects found.</p>
+              <Typography variant="body1" color="textSecondary" sx={{ mt: 4 }}>
+                No projects found.
+              </Typography>
             )}
-          </div>
+          </>
         ) : (
-          <p className="text-red-500">Please sign in to view your projects.</p>
+          <Typography variant="body1" color="error">
+            Please sign in to view your projects.
+          </Typography>
         )}
-      </div>
-    </Fragment>
+
+        {/* Toast Notification */}
+        <Snackbar
+          open={toast.open}
+          autoHideDuration={3000}
+          onClose={() => setToast({ ...toast, open: false })}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <Alert severity={toast.severity} onClose={() => setToast({ ...toast, open: false })}>
+            {toast.message}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </motion.div>
   );
 }
