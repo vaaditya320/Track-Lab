@@ -1,4 +1,4 @@
-"use client"; 
+"use client";
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -7,7 +7,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { 
   Container, Typography, Button, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, CircularProgress 
+  TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, CircularProgress, Skeleton 
 } from "@mui/material";
 import { motion } from "framer-motion";
 
@@ -137,9 +137,31 @@ export default function Home() {
             )}
           </>
         ) : (
-          <Typography variant="body1" color="error">
-            Please sign in to view your projects.
-          </Typography>
+          <Container
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "60vh",
+              flexDirection: "column",
+            }}
+          >
+            <Typography variant="h5" color="textSecondary" sx={{ mb: 3, textAlign: "center" }}>
+              Welcome to TrackLab! <br />
+              TrackLab helps you manage and submit your projects with ease. <br />
+              Sign in to start tracking your progress.
+            </Typography>
+
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              sx={{ px: 4, py: 2, fontSize: "16px" }}
+              onClick={() => router.push("/api/auth/signin")}
+            >
+              Login
+            </Button>
+          </Container>
         )}
 
         {/* Toast Notification */}
