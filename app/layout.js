@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppBar, Toolbar, Typography, Button, Container } from "@mui/material";
 import { motion } from "framer-motion";
-import { SpeedInsights } from "@vercel/speed-insights/next"; 
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react"
 import "./globals.css";
 
 
@@ -14,7 +15,8 @@ export default function Layout({ children }) {
     <SessionProvider>
       <html lang="en">
         <body>
-          <SpeedInsights /> 
+          <SpeedInsights />
+          <Analytics/> 
 
           <Fragment>
             {/* Header */}
