@@ -35,8 +35,8 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 NEXTAUTH_SECRET=your_nextauth_secret
 
 # Email Configuration
-EMAIL_SERVER=smtp://your_smtp_server
 EMAIL_FROM=your_email@example.com
+GMAIL_APP_PASSWORD=your_gmail_app_password
 
 # AWS S3 (For Future Storage)
 AWS_ACCESS_KEY_ID=your_aws_access_key

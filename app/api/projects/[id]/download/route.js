@@ -140,14 +140,14 @@ async function sendEmailWithPDF(userEmail, s3Key) {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "vaaditya320@gmail.com",
+        user: process.env.EMAIL_FROM,
         pass: process.env.GMAIL_APP_PASSWORD,
       },
     });
 
     // Send email with PDF as an attachment
     await transporter.sendMail({
-      from: "vaaditya320@gmail.com",
+      from: process.env.EMAIL_FROM,
       to: userEmail,
       subject: "Your Project Report",
       text: "Please find your project report attached.",
