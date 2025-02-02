@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { AppBar, Toolbar, Typography, Button, Container } from "@mui/material";
 import { motion } from "framer-motion";
-import { SpeedInsights } from "@vercel/speed-insights/react"; 
+import { SpeedInsights } from "@vercel/speed-insights/next"; 
 import "./globals.css";
 
 
