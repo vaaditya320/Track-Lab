@@ -51,7 +51,7 @@ export default function Layout({ children }) {
                   <Typography variant="body2" sx={{ color: "white" }}>
                     &copy; 2025 TrackLab. All rights reserved. |{" "}
                     <Link
-                      href="https://aadityavinayak.in.in"
+                      href="https://aadityavinayak.in.net"
                       target="_blank"
                       style={{ color: "#90caf9", textDecoration: "none", fontWeight: "bold" }}
                     >
