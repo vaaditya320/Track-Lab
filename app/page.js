@@ -7,7 +7,8 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { 
   Container, Typography, Button, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, CircularProgress, Skeleton 
+  TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, 
+  CircularProgress, LinearProgress 
 } from "@mui/material";
 import { motion } from "framer-motion";
 
@@ -15,7 +16,8 @@ export default function Home() {
   const { data: session, status } = useSession();
   const [projects, setProjects] = useState([]);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(null); // Track loading per project
+  const [loading, setLoading] = useState(true); // Page-wide loading state
+  const [loadingProjectId, setLoadingProjectId] = useState(null); // Track loading per project
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const router = useRouter();
 
@@ -27,12 +29,15 @@ export default function Home() {
         .catch((error) => {
           console.error("Error fetching projects:", error);
           setError("There was an issue fetching your projects.");
-        });
+        })
+        .finally(() => setLoading(false));
+    } else if (status === "unauthenticated") {
+      setLoading(false);
     }
   }, [status, session?.user.id]);
 
   const handleDownloadSummary = async (projectId) => {
-    setLoading(projectId); // Show loader for this project
+    setLoadingProjectId(projectId);
 
     try {
       const response = await axios.get(`/api/projects/${projectId}/download`);
@@ -45,7 +50,7 @@ export default function Home() {
       console.error("Error downloading summary:", error);
       setToast({ open: true, message: "There was an issue downloading the summary.", severity: "error" });
     } finally {
-      setLoading(null); // Remove loading state
+      setLoadingProjectId(null);
     }
   };
 
@@ -59,12 +64,14 @@ export default function Home() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
+      {loading && <LinearProgress color="primary" />}
+
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Typography variant="h4" fontWeight="bold" gutterBottom>
           Welcome to TrackLab
         </Typography>
 
-        {status === "authenticated" ? (
+        {loading ? null : status === "authenticated" ? (
           <>
             <Typography variant="h6" color="textSecondary" sx={{ mb: 3 }}>
               Hello, {session.user.name}
@@ -107,9 +114,9 @@ export default function Home() {
                             variant="contained"
                             color="primary"
                             onClick={() => handleDownloadSummary(project.id)}
-                            disabled={loading === project.id} // Disable if loading
+                            disabled={loadingProjectId === project.id}
                           >
-                            {loading === project.id ? <CircularProgress size={24} color="inherit" /> : "Download"}
+                            {loadingProjectId === project.id ? <CircularProgress size={24} color="inherit" /> : "Download"}
                           </Button>
                         </TableCell>
                         <TableCell>
