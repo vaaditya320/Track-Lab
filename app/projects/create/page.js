@@ -16,18 +16,26 @@ import {
   CardContent,
   InputLabel,
   FormControl,
-  Alert
+  Alert,
+  CircularProgress,
+  Snackbar,
+  LinearProgress,
+  Box
 } from "@mui/material";
 import { motion } from "framer-motion";
 
 export default function CreateProject() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+
   const [title, setTitle] = useState("");
   const [numMembers, setNumMembers] = useState(1);
   const [teamMembers, setTeamMembers] = useState([]);
   const [borrowedComponents, setBorrowedComponents] = useState("");
   const [error, setError] = useState("");
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+  const [progress, setProgress] = useState(100);
 
   useEffect(() => {
     setTeamMembers(Array(numMembers).fill(""));
@@ -42,10 +50,13 @@ export default function CreateProject() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !borrowedComponents || teamMembers.some(member => !member)) {
+    if (!title || !borrowedComponents || teamMembers.some((member) => !member)) {
       setError("Please fill in all fields.");
       return;
     }
+
+    setLoading(true);
+    setError("");
 
     try {
       const projectData = {
@@ -54,16 +65,41 @@ export default function CreateProject() {
         components: borrowedComponents,
       };
 
-      const response = await axios.post('/api/projects/create', projectData);
+      const response = await axios.post("/api/projects/create", projectData);
 
       if (response.status === 201) {
-        router.push(`/`);
+        setToast({ open: true, message: "Project created successfully!", severity: "success" });
+
+        // Start progress countdown
+        let timeLeft = 3000; // 3 seconds
+        const interval = setInterval(() => {
+          setProgress((prev) => Math.max(prev - (100 / (timeLeft / 100)), 0));
+        }, 100);
+
+        // Redirect after 3 seconds
+        setTimeout(() => {
+          clearInterval(interval);
+          router.push(`/`);
+        }, 3000);
       }
     } catch (error) {
-      setError("There was an error creating the project.");
+      setToast({ open: true, message: "Error creating project!", severity: "error" });
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (status === "loading") {
+    return (
+      <Container
+        maxWidth="md"
+        sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
+      >
+        <CircularProgress />
+      </Container>
+    );
+  }
 
   return (
     <motion.div
@@ -137,8 +173,14 @@ export default function CreateProject() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Button type="submit" variant="contained" color="primary" fullWidth>
-                    Create Project
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    disabled={loading}
+                  >
+                    {loading ? <CircularProgress size={24} color="inherit" /> : "Create Project"}
                   </Button>
                 </Grid>
               </Grid>
@@ -146,6 +188,27 @@ export default function CreateProject() {
           </CardContent>
         </Card>
       </Container>
+
+      {/* Toast Notification */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={3000}
+        onClose={() => setToast({ ...toast, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Box sx={{ width: "100%" }}>
+          <Alert severity={toast.severity} onClose={() => setToast({ ...toast, open: false })}>
+            {toast.message}
+          </Alert>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{
+              backgroundColor: toast.severity === "success" ? "#1B5E20" : "#B71C1C",
+            }}
+          />
+        </Box>
+      </Snackbar>
     </motion.div>
   );
 }

@@ -13,19 +13,26 @@ import {
   CardContent,
   Alert,
   CircularProgress,
+  Snackbar,
+  LinearProgress,
+  Box
 } from "@mui/material";
 import { motion } from "framer-motion";
 
 export default function SubmitPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const params = useParams();
+  const projectId = params?.id;
+
   const [project, setProject] = useState(null);
   const [summary, setSummary] = useState("");
   const [photo, setPhoto] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const params = useParams();
-  const projectId = params?.id;
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+  const [progress, setProgress] = useState(100);
 
   useEffect(() => {
     if (status === "authenticated" && projectId) {
@@ -52,6 +59,9 @@ export default function SubmitPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setSubmitting(true);
+    setError("");
+
     const formData = new FormData();
     formData.append("summary", summary);
     formData.append("photo", photo);
@@ -63,22 +73,35 @@ export default function SubmitPage() {
       });
 
       if (response.ok) {
-        alert("Project submitted successfully.");
-        router.push("/");
+        setToast({ open: true, message: "Project submitted successfully!", severity: "success" });
+
+        let timeLeft = 3000;
+        const interval = setInterval(() => {
+          setProgress((prev) => Math.max(prev - (100 / (timeLeft / 100)), 0));
+        }, 100);
+
+        setTimeout(() => {
+          clearInterval(interval);
+          router.push("/");
+        }, 3000);
       } else {
-        setError("Error submitting project.");
+        setToast({ open: true, message: "Error submitting project.", severity: "error" });
       }
     } catch (error) {
       console.error("Error submitting project:", error);
-      setError("Error submitting project.");
+      setToast({ open: true, message: "Error submitting project.", severity: "error" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (loading) {
+  if (loading || status === "loading") {
     return (
-      <Container maxWidth="md" sx={{ textAlign: "center", py: 6 }}>
+      <Container
+        maxWidth="md"
+        sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
+      >
         <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>Loading...</Typography>
       </Container>
     );
   }
@@ -144,8 +167,14 @@ export default function SubmitPage() {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Button type="submit" variant="contained" color="primary" fullWidth>
-                    Complete Submission
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    disabled={submitting}
+                  >
+                    {submitting ? <CircularProgress size={24} color="inherit" /> : "Complete Submission"}
                   </Button>
                 </Grid>
               </Grid>
@@ -153,6 +182,30 @@ export default function SubmitPage() {
           </CardContent>
         </Card>
       </Container>
+
+      {/* Toast Notification */}
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={3000}
+        onClose={() => setToast({ ...toast, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Box sx={{ width: "100%" }}>
+          <Alert severity={toast.severity} onClose={() => setToast({ ...toast, open: false })}>
+            {toast.message}
+          </Alert>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{
+              backgroundColor: toast.severity === "success" ? "#1B5E20" : "#B71C1C",
+              "& .MuiLinearProgress-bar": {
+                backgroundColor: toast.severity === "success" ? "#4CAF50" : "#E53935",
+              },
+            }}
+          />
+        </Box>
+      </Snackbar>
     </motion.div>
   );
 }
