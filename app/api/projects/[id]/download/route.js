@@ -3,10 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import nodemailer from "nodemailer";
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { Buffer } from "buffer";
 
-// AWS S3 Configuration
 const s3 = new S3Client({
   region: "ap-south-1",
   credentials: {
@@ -20,7 +19,36 @@ const FOLDER_NAME = "tracklab-project-reports/";
 
 const prisma = new PrismaClient();
 
-// Fetch image from S3 (same as your original code)
+// Check if PDF exists in S3
+async function checkIfPdfExists(s3Key) {
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
+    return true;
+  } catch (error) {
+    if (error.name === "NotFound") return false;
+    console.error("Error checking PDF in S3:", error);
+    throw new Error("Failed to check PDF existence");
+  }
+}
+
+// Fetch PDF from S3
+async function fetchPdfFromS3(s3Key) {
+  try {
+    const { Body } = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
+
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      Body.on("data", (chunk) => chunks.push(chunk));
+      Body.on("end", () => resolve(Buffer.concat(chunks)));
+      Body.on("error", reject);
+    });
+  } catch (error) {
+    console.error("Error fetching PDF from S3:", error);
+    throw new Error("Failed to fetch PDF from S3");
+  }
+}
+
+// Fetch project image from S3
 async function fetchImageFromS3(s3Key) {
   try {
     if (!s3Key) throw new Error("S3 key is missing");
@@ -44,7 +72,7 @@ async function fetchImageFromS3(s3Key) {
   }
 }
 
-// Generate PDF in memory and upload to S3
+// Generate PDF and upload to S3
 async function generateAndUploadPDF(project, leaderName) {
   try {
     const pdfDoc = await PDFDocument.create();
@@ -101,14 +129,13 @@ async function generateAndUploadPDF(project, leaderName) {
 
     // Save PDF in memory and upload to S3
     const pdfBytes = await pdfDoc.save();
-    const uniqueFilename = `${Date.now()}-Project-${project.id}.pdf`;
-    const s3Key = `${FOLDER_NAME}${uniqueFilename}`;
+    const s3Key = `${FOLDER_NAME}${leaderName.replace(/\s+/g, "_")}-${project.status}-project-${project.id}.pdf`;
 
     const uploadParams = {
       Bucket: BUCKET_NAME,
       Key: s3Key,
       Body: Buffer.from(pdfBytes),
-      ContentType: 'application/pdf',
+      ContentType: "application/pdf",
     };
 
     await s3.send(new PutObjectCommand(uploadParams));
@@ -121,22 +148,8 @@ async function generateAndUploadPDF(project, leaderName) {
 }
 
 // Send email with PDF attachment
-async function sendEmailWithPDF(userEmail, s3Key) {
+async function sendEmailWithPDF(userEmail, pdfBuffer, s3Key) {
   try {
-    // Fetch the PDF from S3
-    const { Body } = await s3.send(new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: s3Key,
-    }));
-
-    const pdfBuffer = await new Promise((resolve, reject) => {
-      const chunks = [];
-      Body.on("data", (chunk) => chunks.push(chunk));
-      Body.on("end", () => resolve(Buffer.concat(chunks)));
-      Body.on("error", reject);
-    });
-
-    // Create email transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -145,7 +158,6 @@ async function sendEmailWithPDF(userEmail, s3Key) {
       },
     });
 
-    // Send email with PDF as an attachment
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: userEmail,
@@ -153,9 +165,9 @@ async function sendEmailWithPDF(userEmail, s3Key) {
       text: "Please find your project report attached.",
       attachments: [
         {
-          filename: `${s3Key.split('/').pop()}`, // Extract filename from S3 key
-          content: pdfBuffer, // Attach the PDF buffer
-          encoding: 'base64', // Base64 encoding (default for binary files)
+          filename: `${s3Key.split("/").pop()}`,
+          content: pdfBuffer,
+          encoding: "base64",
         },
       ],
     });
@@ -167,19 +179,11 @@ async function sendEmailWithPDF(userEmail, s3Key) {
   }
 }
 
-// Delete PDF from S3 after sending the email
-async function deletePdfFromS3(s3Key) {
-  try {
-    const command = new DeleteObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: s3Key,
-    });
-
-    await s3.send(command);
-    console.log("PDF deleted from S3 successfully");
-  } catch (error) {
-    console.error("Error deleting PDF from S3:", error);
-  }
+// Fetch project details including status
+async function fetchProjectDetails(projectId) {
+  const response = await fetch(`${process.env.BASE_URL}/api/projects/${projectId}`);
+  if (!response.ok) throw new Error("Failed to fetch project details");
+  return response.json();
 }
 
 // API Route
@@ -191,18 +195,24 @@ export async function GET(req, { params }) {
     const session = await getServerSession(authOptions);
     if (!session) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
 
-    const project = await prisma.project.findUnique({
-      where: { id, leaderId: session.user.id },
-    });
-
+    const project = await fetchProjectDetails(id);
     if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
 
-    const leaderName = session.user.name;
-    const s3Key = await generateAndUploadPDF(project, leaderName);
-    await sendEmailWithPDF(session.user.email, s3Key);
+    const leaderName = project.leader.name;
+    const s3Key = `${FOLDER_NAME}${leaderName.replace(/\s+/g, "_")}-${project.status}-project-${project.id}.pdf`;
 
-    // After sending email, delete the PDF from S3
-    await deletePdfFromS3(s3Key);
+    let pdfBuffer;
+
+    if (await checkIfPdfExists(s3Key)) {
+      console.log("PDF already exists. Fetching from S3...");
+      pdfBuffer = await fetchPdfFromS3(s3Key);
+    } else {
+      console.log("PDF not found. Generating new PDF...");
+      await generateAndUploadPDF(project, leaderName);
+      pdfBuffer = await fetchPdfFromS3(s3Key);
+    }
+
+    await sendEmailWithPDF(session.user.email, pdfBuffer, s3Key);
 
     return new Response(JSON.stringify({ message: "PDF sent to your email" }), { status: 200 });
   } catch (error) {
