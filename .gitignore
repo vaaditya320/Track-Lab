@@ -45,3 +45,5 @@ next-env.d.ts
 
 # workflow file
 /.github
+# vs code config
+/.vscode
