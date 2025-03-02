@@ -6,19 +6,214 @@ import Link from "next/link";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { 
-  Container, Typography, Button, Table, TableBody, TableCell, 
+  Box, Container, Typography, Button, Table, TableBody, TableCell, 
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, 
-  CircularProgress, LinearProgress 
+  CircularProgress, Skeleton, Chip, Tooltip, IconButton,
+  Card, CardContent, Grid
 } from "@mui/material";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AddIcon from '@mui/icons-material/Add';
+import DownloadIcon from '@mui/icons-material/Download';
+import SendIcon from '@mui/icons-material/Send';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import { ThemeProvider } from "@mui/material/styles";
+import { theme } from "./theme/trackLabTheme";
+import ProjectStatusBadge from "./components/ProjectStatusBadge";
+import ProjectStatsCard from "./components/ProjectStatsCard";
+import DashboardSkeleton from "./components/DashboardSkeleton";
 
+// Project table component
+const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, handleSubmitProject }) => {
+  return (
+    <TableContainer 
+      component={Paper} 
+      elevation={2} 
+      sx={{ 
+        borderRadius: 2, // Reduced border radius for better text visibility
+        overflow: 'auto', // Changed from 'hidden' to 'auto' for mobile scrolling
+        '& .MuiTable-root': {
+          borderCollapse: 'separate',
+          borderSpacing: 0,
+        },
+      }}
+    >
+      <Table>
+        <TableHead>
+          <TableRow sx={{ backgroundColor: `${theme.palette.primary.light}15` }}>
+            <TableCell width="5%"><Typography variant="subtitle2">S. No.</Typography></TableCell>
+            <TableCell width="30%"><Typography variant="subtitle2">Project Name</Typography></TableCell>
+            <TableCell width="15%"><Typography variant="subtitle2">Status</Typography></TableCell>
+            <TableCell width="15%"><Typography variant="subtitle2">Actions</Typography></TableCell>
+            <TableCell width="15%"><Typography variant="subtitle2">Submit</Typography></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {projects.map((project, index) => (
+            <TableRow 
+              key={project.id} 
+              hover
+              component={motion.tr}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+            >
+              <TableCell>{index + 1}</TableCell>
+              <TableCell>
+                <Typography variant="body1" fontWeight={500}>
+                  {project.title}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <ProjectStatusBadge status={project.status} />
+              </TableCell>
+              <TableCell>
+                <Tooltip title="Download project summary">
+                  <span>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      startIcon={loadingProjectId === project.id ? 
+                        <CircularProgress size={16} color="inherit" /> : 
+                        <DownloadIcon />}
+                      onClick={() => handleDownloadSummary(project.id)}
+                      disabled={loadingProjectId === project.id}
+                      sx={{ borderRadius: 4 }} // Reduced border radius
+                    >
+                      Summary
+                    </Button>
+                  </span>
+                </Tooltip>
+              </TableCell>
+              <TableCell>
+                {project.status === "PARTIAL" ? (
+                  <Tooltip title="Submit your project">
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      startIcon={<SendIcon />}
+                      onClick={() => handleSubmitProject(project.id)}
+                      sx={{ borderRadius: 4 }} // Reduced border radius
+                    >
+                      Submit
+                    </Button>
+                  </Tooltip>
+                ) : (
+                  <Chip 
+                    label="Submitted" 
+                    color="success" 
+                    size="small"
+                    sx={{ borderRadius: 4 }} // Reduced border radius
+                  />
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
+
+// Empty state component
+const EmptyProjectsState = () => (
+  <Box 
+    sx={{ 
+      textAlign: 'center', 
+      py: 8,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 2,
+      bgcolor: 'background.paper',
+      borderRadius: 2, // Reduced border radius
+      boxShadow: 1,
+      my: 4,
+    }}
+    component={motion.div}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+  >
+    <FolderOpenIcon sx={{ fontSize: 64, color: 'text.disabled' }} />
+    <Typography variant="h6" color="text.secondary">
+      No projects yet
+    </Typography>
+    <Typography variant="body2" color="text.disabled" sx={{ maxWidth: 400, mb: 2, px: 2 }}>
+      Create your first project to get started tracking your progress
+    </Typography>
+    <Button 
+      variant="contained" 
+      color="primary"
+      startIcon={<AddIcon />}
+      component={Link}
+      href="/projects/create"
+    >
+      Create First Project
+    </Button>
+  </Box>
+);
+
+// Welcome banner for authenticated users
+const WelcomeBanner = ({ userName }) => (
+  <Card 
+    sx={{ 
+      mb: 4, 
+      background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.primary.light}30)`,
+      borderRadius: 2, // Reduced border radius
+      overflow: 'hidden',
+      position: 'relative',
+    }}
+    elevation={0}
+    component={motion.div}
+    initial={{ opacity: 0, y: -20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+  >
+    <CardContent sx={{ py: 3 }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} md={8}>
+          <Typography variant="h5" fontWeight="bold" gutterBottom>
+            Welcome back, {userName}!
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Track, manage, and submit your projects with ease.
+          </Typography>
+        </Grid>
+        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: { xs: 2, md: 0 } }}>
+          <Button 
+            variant="contained" 
+            color="primary"
+            startIcon={<AddIcon />}
+            component={Link}
+            href="/projects/create"
+            sx={{ 
+              px: 3, 
+              py: 1.2,
+              fontWeight: 600,
+              boxShadow: 2,
+              borderRadius: 2, // Reduced border radius
+            }}
+          >
+            New Project
+          </Button>
+        </Grid>
+      </Grid>
+    </CardContent>
+  </Card>
+);
+
+// Main Home component
 export default function Home() {
   const { data: session, status } = useSession();
   const [projects, setProjects] = useState([]);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true); // Page-wide loading state
-  const [loadingProjectId, setLoadingProjectId] = useState(null); // Track loading per project
+  const [loading, setLoading] = useState(true);
+  const [loadingProjectId, setLoadingProjectId] = useState(null);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+  const [viewMode, setViewMode] = useState("table"); // table or dashboard
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +229,7 @@ export default function Home() {
     } else if (status === "unauthenticated") {
       setLoading(false);
     }
-  }, [status, session?.user.id]);
+  }, [status, session?.user?.id]);
 
   const handleDownloadSummary = async (projectId) => {
     setLoadingProjectId(projectId);
@@ -58,131 +253,186 @@ export default function Home() {
     router.push(`/projects/${projectId}/submit`);
   };
 
+  // Calculate project statistics
+  const projectStats = {
+    total: projects.length,
+    submitted: projects.filter(p => p.status !== "PARTIAL").length,
+    inProgress: projects.filter(p => p.status === "PARTIAL").length,
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      {loading && <LinearProgress color="primary" />}
-
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Welcome to TrackLab
-        </Typography>
-
-        {loading ? null : status === "authenticated" ? (
-          <>
-            <Typography variant="h6" color="textSecondary" sx={{ mb: 3 }}>
-              Hello, {session.user.name}
-            </Typography>
-
-            <Link href="/projects/create" passHref>
-              <Button variant="contained" color="success" sx={{ mb: 3 }}>
-                Create New Project
-              </Button>
-            </Link>
-
-            {error && (
-              <Typography color="error" sx={{ mb: 3 }}>
-                {error}
-              </Typography>
-            )}
-
-            {projects.length > 0 ? (
-              <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2 }}>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: "#eeeeee" }}>
-                      <TableCell><strong>S. No.</strong></TableCell>
-                      <TableCell><strong>Project Name</strong></TableCell>
-                      <TableCell><strong>Status</strong></TableCell>
-                      <TableCell><strong>Download Summary</strong></TableCell>
-                      <TableCell><strong>Submit</strong></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {projects.map((project, index) => (
-                      <TableRow key={project.id} hover>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{project.title}</TableCell>
-                        <TableCell>
-                          {project.status === "PARTIAL" ? "Partial" : "Submitted"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => handleDownloadSummary(project.id)}
-                            disabled={loadingProjectId === project.id}
-                          >
-                            {loadingProjectId === project.id ? <CircularProgress size={24} color="inherit" /> : "Download"}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          {project.status === "PARTIAL" ? (
-                            <Button
-                              variant="contained"
-                              color="warning"
-                              onClick={() => handleSubmitProject(project.id)}
-                            >
-                              Submit
-                            </Button>
-                          ) : (
-                            <Typography color="textSecondary">Already Submitted</Typography>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography variant="body1" color="textSecondary" sx={{ mt: 4 }}>
-                No projects found.
-              </Typography>
-            )}
-          </>
-        ) : (
-          <Container
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "60vh",
-              flexDirection: "column",
-            }}
+    <ThemeProvider theme={theme}>
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          backgroundColor: theme.palette.background.default,
+          pb: 8,
+          width: '100%',
+        }}
+      >
+        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
           >
-            <Typography variant="h5" color="textSecondary" sx={{ mb: 3, textAlign: "center" }}>
-              Welcome to TrackLab! <br />
-              TrackLab helps you manage and submit your projects with ease. <br />
-              Sign in to start tracking your progress.
-            </Typography>
+            {/* App Header */}
+            <Box sx={{ mb: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography 
+                variant="h4" 
+                fontWeight="bold"
+                component={motion.h4}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                TrackLab
+              </Typography>
+              
+              {status === "authenticated" && (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Tooltip title={viewMode === "table" ? "Dashboard View" : "Table View"}>
+                    <IconButton 
+                      onClick={() => setViewMode(viewMode === "table" ? "dashboard" : "table")}
+                      color="primary"
+                    >
+                      <DashboardIcon />
+                    </IconButton>
+                  </Tooltip>
+                  {/* Removed Filter and Sort buttons as requested */}
+                </Box>
+              )}
+            </Box>
 
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              sx={{ px: 4, py: 2, fontSize: "16px" }}
-              onClick={() => router.push("/api/auth/signin")}
+            {loading ? (
+              <DashboardSkeleton />
+            ) : status === "authenticated" ? (
+              <>
+                <WelcomeBanner userName={session.user.name} />
+                
+                {error && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                  </Alert>
+                )}
+
+                {viewMode === "dashboard" && (
+                  <Grid container spacing={3} sx={{ mb: 4 }}>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <ProjectStatsCard 
+                        title="Total Projects"
+                        count={projectStats.total}
+                        icon="total"
+                        color={theme.palette.primary.main}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <ProjectStatsCard 
+                        title="In Progress"
+                        count={projectStats.inProgress}
+                        icon="progress"
+                        color={theme.palette.warning.main}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <ProjectStatsCard 
+                        title="Submitted"
+                        count={projectStats.submitted}
+                        icon="submitted"
+                        color={theme.palette.success.main}
+                      />
+                    </Grid>
+                  </Grid>
+                )}
+
+                <Box sx={{ overflowX: 'auto', width: '100%' }}> {/* Added wrapper with overflow-x for mobile */}
+                  <AnimatePresence mode="wait">
+                    {projects.length > 0 ? (
+                      <motion.div
+                        key="projects-table"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.4 }}
+                        style={{ minWidth: '100%' }}
+                      >
+                        <ProjectsTable 
+                          projects={projects}
+                          loadingProjectId={loadingProjectId}
+                          handleDownloadSummary={handleDownloadSummary}
+                          handleSubmitProject={handleSubmitProject}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="empty-state"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <EmptyProjectsState />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Box>
+              </>
+            ) : (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "60vh",
+                  flexDirection: "column",
+                  backgroundColor: "white",
+                  borderRadius: 2, // Reduced border radius
+                  p: { xs: 3, sm: 6 }, // Responsive padding
+                  boxShadow: 1,
+                }}
+                component={motion.div}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, textAlign: "center" }}>
+                  Welcome to TrackLab
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: "center", maxWidth: 600, px: 2 }}>
+                  TrackLab helps you manage and submit your projects with ease. Sign in to start tracking your progress.
+                </Typography>
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }} // Reduced border radius
+                  onClick={() => router.push("/api/auth/signin")}
+                >
+                  Login to Get Started
+                </Button>
+              </Box>
+            )}
+          </motion.div>
+
+          {/* Toast Notification */}
+          <Snackbar
+            open={toast.open}
+            autoHideDuration={3000}
+            onClose={() => setToast({ ...toast, open: false })}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          >
+            <Alert 
+              severity={toast.severity} 
+              onClose={() => setToast({ ...toast, open: false })}
+              elevation={6}
+              variant="filled"
             >
-              Login
-            </Button>
-          </Container>
-        )}
-
-        {/* Toast Notification */}
-        <Snackbar
-          open={toast.open}
-          autoHideDuration={3000}
-          onClose={() => setToast({ ...toast, open: false })}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        >
-          <Alert severity={toast.severity} onClose={() => setToast({ ...toast, open: false })}>
-            {toast.message}
-          </Alert>
-        </Snackbar>
-      </Container>
-    </motion.div>
+              {toast.message}
+            </Alert>
+          </Snackbar>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 }

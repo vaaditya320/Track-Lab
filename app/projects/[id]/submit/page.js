@@ -15,9 +15,18 @@ import {
   CircularProgress,
   Snackbar,
   LinearProgress,
-  Box
+  Box,
+  Paper,
+  Divider,
+  Avatar,
+  Stack,
+  Chip,
+  IconButton
 } from "@mui/material";
 import { motion } from "framer-motion";
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 export default function SubmitPage() {
   const { data: session, status } = useSession();
@@ -33,6 +42,7 @@ export default function SubmitPage() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [progress, setProgress] = useState(100);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   useEffect(() => {
     if (status === "authenticated" && projectId) {
@@ -54,6 +64,13 @@ export default function SubmitPage() {
     const file = event.target.files[0];
     if (file) {
       setPhoto(file);
+      
+      // Create a preview URL for the image
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -95,90 +112,259 @@ export default function SubmitPage() {
     }
   };
 
+  const getTeamMembers = () => {
+    if (!project) return [];
+    
+    if (Array.isArray(project.teamMembers)) {
+      return project.teamMembers;
+    }
+    
+    try {
+      return JSON.parse(project.teamMembers || "[]");
+    } catch (e) {
+      return [];
+    }
+  };
+
   if (loading || status === "loading") {
     return (
-      <Container
-        maxWidth="md"
-        sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
-      >
-        <CircularProgress />
+      <Container maxWidth="lg" sx={{ height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Box sx={{ textAlign: "center" }}>
+            <CircularProgress size={60} thickness={4} />
+            <Typography variant="h6" sx={{ mt: 2, fontWeight: 500 }}>
+              Loading project details...
+            </Typography>
+          </Box>
+        </motion.div>
       </Container>
     );
   }
 
   if (!project) {
     return (
-      <Container maxWidth="md" sx={{ textAlign: "center", py: 6 }}>
-        <Alert severity="error">Project not found.</Alert>
+      <Container maxWidth="md" sx={{ textAlign: "center", py: 8 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+            <Alert severity="error" sx={{ mb: 2 }}>Project not found.</Alert>
+            <Button 
+              variant="contained" 
+              startIcon={<ArrowBackIcon />}
+              onClick={() => router.push("/")}
+            >
+              Return to Dashboard
+            </Button>
+          </Paper>
+        </motion.div>
       </Container>
     );
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Card elevation={3} sx={{ borderRadius: 2 }}>
-          <CardContent>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
-              Submit Project: {project.title}
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      transition={{ duration: 0.5 }}
+    >
+      <Container maxWidth="lg" sx={{ py: 5 }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            display: "flex", 
+            alignItems: "center", 
+            mb: 3, 
+            p: 2,
+            backgroundColor: "transparent",
+            cursor: "pointer"
+          }}
+          onClick={() => router.push(`/projects/${projectId}`)}
+        >
+          <IconButton size="small" sx={{ mr: 1 }}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="body1">Back to project</Typography>
+        </Paper>
+
+        <Card 
+          elevation={3} 
+          sx={{ 
+            borderRadius: 2,
+            overflow: "hidden",
+            backgroundImage: "linear-gradient(to bottom right, rgba(255,255,255,0.8), rgba(255,255,255,0.9))",
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          <Box 
+            sx={{ 
+              p: 3, 
+              py: 4,
+              background: "linear-gradient(135deg, #4527a0, #7b1fa2)",
+              color: "white" 
+            }}
+          >
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+              Complete Your Project
             </Typography>
-
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              <strong>Team Members:</strong> {Array.isArray(project.teamMembers) 
-                ? project.teamMembers.join(", ") 
-                : JSON.parse(project.teamMembers || "[]").join(", ")}
+            <Typography variant="h6">
+              {project.title}
             </Typography>
+          </Box>
 
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          <CardContent sx={{ p: 4 }}>
+            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Project Details
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  <Typography variant="subtitle1" sx={{ mb: 0.5 }} color="text.secondary">
+                    Team Members
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                    {getTeamMembers().map((member, index) => (
+                      <Chip 
+                        key={index}
+                        avatar={<Avatar>{member.charAt(0).toUpperCase()}</Avatar>}
+                        label={member}
+                        variant="outlined"
+                        sx={{ mb: 1 }}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+
+                <form onSubmit={handleSubmit}>
                   <TextField
                     label="Project Summary"
                     variant="outlined"
                     fullWidth
                     multiline
-                    rows={3}
+                    rows={5}
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     required
+                    placeholder="Describe what you've accomplished in this project, challenges faced, and solutions implemented..."
+                    sx={{ mb: 3 }}
                   />
-                </Grid>
 
-                <Grid item xs={12}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    style={{ display: "none" }}
-                    id="photo-upload"
-                  />
-                  <label htmlFor="photo-upload">
-                    <Button variant="contained" component="span" fullWidth>
-                      Upload Project Photo
-                    </Button>
-                  </label>
-                  {photo && (
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Selected file: {photo.name}
-                    </Typography>
-                  )}
-                </Grid>
-
-                <Grid item xs={12}>
                   <Button
                     type="submit"
                     variant="contained"
                     color="primary"
                     fullWidth
-                    disabled={submitting}
+                    disabled={submitting || !photo}
+                    size="large"
+                    sx={{ 
+                      py: 1.5, 
+                      borderRadius: 2,
+                      background: !submitting && photo ? "linear-gradient(135deg, #4527a0, #7b1fa2)" : undefined
+                    }}
+                    startIcon={submitting ? <CircularProgress size={24} color="inherit" /> : <CheckCircleIcon />}
                   >
-                    {submitting ? <CircularProgress size={24} color="inherit" /> : "Complete Submission"}
+                    {submitting ? "Submitting..." : "Complete Project"}
                   </Button>
-                </Grid>
+                </form>
               </Grid>
-            </form>
+              
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Project Photo
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      border: '2px dashed #ccc',
+                      borderRadius: 2,
+                      p: 3,
+                      textAlign: 'center',
+                      backgroundColor: previewUrl ? 'transparent' : '#f8f9fa',
+                      position: 'relative',
+                      height: 320,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {previewUrl ? (
+                      <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <img
+                          src={previewUrl}
+                          alt="Preview"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            p: 1,
+                            background: 'rgba(0,0,0,0.6)',
+                            color: 'white',
+                            borderBottomLeftRadius: '8px',
+                            borderBottomRightRadius: '8px'
+                          }}
+                        >
+                          <Typography variant="body2">{photo?.name}</Typography>
+                        </Box>
+                      </Box>
+                    ) : (
+                      <>
+                        <CloudUploadIcon sx={{ fontSize: 60, color: '#9e9e9e', mb: 2 }} />
+                        <Typography variant="body1" gutterBottom>
+                          Drag and drop your project photo here
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          or click to browse files
+                        </Typography>
+                      </>
+                    )}
+                    
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      style={{
+                        opacity: 0,
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        cursor: 'pointer'
+                      }}
+                      id="photo-upload"
+                    />
+                  </Paper>
+                  
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                    Showcase your completed project with a high-quality photo
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
           </CardContent>
         </Card>
       </Container>
@@ -190,15 +376,28 @@ export default function SubmitPage() {
         onClose={() => setToast({ ...toast, open: false })}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Box sx={{ width: "100%" }}>
-          <Alert severity={toast.severity} onClose={() => setToast({ ...toast, open: false })}>
+        <Box sx={{ width: "100%", maxWidth: 400 }}>
+          <Alert 
+            severity={toast.severity} 
+            onClose={() => setToast({ ...toast, open: false })}
+            sx={{ 
+              borderTopLeftRadius: 8, 
+              borderTopRightRadius: 8,
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0
+            }}
+            variant="filled"
+          >
             {toast.message}
           </Alert>
           <LinearProgress
             variant="determinate"
             value={progress}
             sx={{
-              backgroundColor: toast.severity === "success" ? "#1B5E20" : "#B71C1C",
+              borderBottomLeftRadius: 8,
+              borderBottomRightRadius: 8,
+              height: 6,
+              backgroundColor: toast.severity === "success" ? "rgba(27, 94, 32, 0.3)" : "rgba(183, 28, 28, 0.3)",
               "& .MuiLinearProgress-bar": {
                 backgroundColor: toast.severity === "success" ? "#4CAF50" : "#E53935",
               },
