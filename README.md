@@ -19,7 +19,7 @@ TrackLab is a project tracking platform designed for **Idea Lab**. It allows use
 
 ### 1️⃣ Clone the Repository
 ```sh
-git clone https://github.com/your-username/TrackLab.git
+git clone https://github.com/vaaditya320/TrackLab.git
 cd TrackLab
 ```
 ### 2️⃣ Create an .env File
@@ -41,8 +41,6 @@ GMAIL_APP_PASSWORD=your_gmail_app_password
 # AWS S3 (For Future Storage)
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-AWS_BUCKET_NAME=your_s3_bucket_name
-AWS_REGION=your_s3_region
 ```
 ### 3️⃣ Install Dependencies
 ```bash
@@ -60,7 +58,6 @@ The app will be available at:
 * Next.js (App Router)
 * PostgreSQL with Prisma ORM
 * Google OAuth2 Authentication
-* Multer for File Uploads
 * Nodemailer for Email Notifications
 * pdf-lib for PDF Generation
 * AWS S3 (Planned for Storage)
