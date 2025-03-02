@@ -17,8 +17,6 @@ import AddIcon from '@mui/icons-material/Add';
 import DownloadIcon from '@mui/icons-material/Download';
 import SendIcon from '@mui/icons-material/Send';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import SortIcon from '@mui/icons-material/Sort';
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./theme/trackLabTheme";
 import ProjectStatusBadge from "./components/ProjectStatusBadge";
@@ -32,8 +30,8 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
       component={Paper} 
       elevation={2} 
       sx={{ 
-        borderRadius: theme.shape.borderRadius,
-        overflow: 'hidden',
+        borderRadius: 2, // Reduced border radius for better text visibility
+        overflow: 'auto', // Changed from 'hidden' to 'auto' for mobile scrolling
         '& .MuiTable-root': {
           borderCollapse: 'separate',
           borderSpacing: 0,
@@ -46,7 +44,6 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
             <TableCell width="5%"><Typography variant="subtitle2">S. No.</Typography></TableCell>
             <TableCell width="30%"><Typography variant="subtitle2">Project Name</Typography></TableCell>
             <TableCell width="15%"><Typography variant="subtitle2">Status</Typography></TableCell>
-            
             <TableCell width="15%"><Typography variant="subtitle2">Actions</Typography></TableCell>
             <TableCell width="15%"><Typography variant="subtitle2">Submit</Typography></TableCell>
           </TableRow>
@@ -70,7 +67,6 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
               <TableCell>
                 <ProjectStatusBadge status={project.status} />
               </TableCell>
-              
               <TableCell>
                 <Tooltip title="Download project summary">
                   <span>
@@ -83,7 +79,7 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                         <DownloadIcon />}
                       onClick={() => handleDownloadSummary(project.id)}
                       disabled={loadingProjectId === project.id}
-                      sx={{ borderRadius: 6 }}
+                      sx={{ borderRadius: 4 }} // Reduced border radius
                     >
                       Summary
                     </Button>
@@ -99,7 +95,7 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                       size="small"
                       startIcon={<SendIcon />}
                       onClick={() => handleSubmitProject(project.id)}
-                      sx={{ borderRadius: 6 }}
+                      sx={{ borderRadius: 4 }} // Reduced border radius
                     >
                       Submit
                     </Button>
@@ -109,7 +105,7 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                     label="Submitted" 
                     color="success" 
                     size="small"
-                    sx={{ borderRadius: 6 }}
+                    sx={{ borderRadius: 4 }} // Reduced border radius
                   />
                 )}
               </TableCell>
@@ -132,7 +128,7 @@ const EmptyProjectsState = () => (
       alignItems: 'center',
       gap: 2,
       bgcolor: 'background.paper',
-      borderRadius: theme.shape.borderRadius,
+      borderRadius: 2, // Reduced border radius
       boxShadow: 1,
       my: 4,
     }}
@@ -145,7 +141,7 @@ const EmptyProjectsState = () => (
     <Typography variant="h6" color="text.secondary">
       No projects yet
     </Typography>
-    <Typography variant="body2" color="text.disabled" sx={{ maxWidth: 400, mb: 2 }}>
+    <Typography variant="body2" color="text.disabled" sx={{ maxWidth: 400, mb: 2, px: 2 }}>
       Create your first project to get started tracking your progress
     </Typography>
     <Button 
@@ -166,7 +162,7 @@ const WelcomeBanner = ({ userName }) => (
     sx={{ 
       mb: 4, 
       background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.primary.light}30)`,
-      borderRadius: theme.shape.borderRadius,
+      borderRadius: 2, // Reduced border radius
       overflow: 'hidden',
       position: 'relative',
     }}
@@ -186,7 +182,7 @@ const WelcomeBanner = ({ userName }) => (
             Track, manage, and submit your projects with ease.
           </Typography>
         </Grid>
-        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: { xs: 2, md: 0 } }}>
           <Button 
             variant="contained" 
             color="primary"
@@ -198,6 +194,7 @@ const WelcomeBanner = ({ userName }) => (
               py: 1.2,
               fontWeight: 600,
               boxShadow: 2,
+              borderRadius: 2, // Reduced border radius
             }}
           >
             New Project
@@ -269,10 +266,11 @@ export default function Home() {
         sx={{ 
           minHeight: '100vh',
           backgroundColor: theme.palette.background.default,
-          pb: 8
+          pb: 8,
+          width: '100%',
         }}
       >
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -301,16 +299,7 @@ export default function Home() {
                       <DashboardIcon />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Filter Projects">
-                    <IconButton color="primary">
-                      <FilterListIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Sort Projects">
-                    <IconButton color="primary">
-                      <SortIcon />
-                    </IconButton>
-                  </Tooltip>
+                  {/* Removed Filter and Sort buttons as requested */}
                 </Box>
               )}
             </Box>
@@ -329,7 +318,7 @@ export default function Home() {
 
                 {viewMode === "dashboard" && (
                   <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} sm={6} md={4}>
                       <ProjectStatsCard 
                         title="Total Projects"
                         count={projectStats.total}
@@ -337,7 +326,7 @@ export default function Home() {
                         color={theme.palette.primary.main}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} sm={6} md={4}>
                       <ProjectStatsCard 
                         title="In Progress"
                         count={projectStats.inProgress}
@@ -345,7 +334,7 @@ export default function Home() {
                         color={theme.palette.warning.main}
                       />
                     </Grid>
-                    <Grid item xs={12} md={4}>
+                    <Grid item xs={12} sm={6} md={4}>
                       <ProjectStatsCard 
                         title="Submitted"
                         count={projectStats.submitted}
@@ -356,34 +345,37 @@ export default function Home() {
                   </Grid>
                 )}
 
-                <AnimatePresence mode="wait">
-                  {projects.length > 0 ? (
-                    <motion.div
-                      key="projects-table"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.4 }}
-                    >
-                      <ProjectsTable 
-                        projects={projects}
-                        loadingProjectId={loadingProjectId}
-                        handleDownloadSummary={handleDownloadSummary}
-                        handleSubmitProject={handleSubmitProject}
-                      />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="empty-state"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.4 }}
-                    >
-                      <EmptyProjectsState />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                <Box sx={{ overflowX: 'auto', width: '100%' }}> {/* Added wrapper with overflow-x for mobile */}
+                  <AnimatePresence mode="wait">
+                    {projects.length > 0 ? (
+                      <motion.div
+                        key="projects-table"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.4 }}
+                        style={{ minWidth: '100%' }}
+                      >
+                        <ProjectsTable 
+                          projects={projects}
+                          loadingProjectId={loadingProjectId}
+                          handleDownloadSummary={handleDownloadSummary}
+                          handleSubmitProject={handleSubmitProject}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="empty-state"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <EmptyProjectsState />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Box>
               </>
             ) : (
               <Box
@@ -394,8 +386,8 @@ export default function Home() {
                   height: "60vh",
                   flexDirection: "column",
                   backgroundColor: "white",
-                  borderRadius: theme.shape.borderRadius,
-                  p: 6,
+                  borderRadius: 2, // Reduced border radius
+                  p: { xs: 3, sm: 6 }, // Responsive padding
                   boxShadow: 1,
                 }}
                 component={motion.div}
@@ -406,7 +398,7 @@ export default function Home() {
                 <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, textAlign: "center" }}>
                   Welcome to TrackLab
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: "center", maxWidth: 600 }}>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: "center", maxWidth: 600, px: 2 }}>
                   TrackLab helps you manage and submit your projects with ease. Sign in to start tracking your progress.
                 </Typography>
 
@@ -414,7 +406,7 @@ export default function Home() {
                   variant="contained"
                   color="primary"
                   size="large"
-                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600 }}
+                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }} // Reduced border radius
                   onClick={() => router.push("/api/auth/signin")}
                 >
                   Login to Get Started

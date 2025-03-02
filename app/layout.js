@@ -33,16 +33,14 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./theme/trackLabTheme";
 import "./globals.css";
 
-// Navigation links
+// Navigation links - Removed "Projects" as requested
 const navLinks = [
   { title: "Dashboard", path: "/", icon: <DashboardIcon /> },
-  { title: "Projects", path: "/projects", icon: <AssignmentIcon /> },
   { title: "Create New", path: "/projects/create", icon: <AddCircleOutlineIcon /> },
 ];
 
@@ -196,7 +194,7 @@ function NavigationHeader() {
         </Container>
       </AppBar>
       
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Navigation Drawer - Fixed to prevent horizontal scrollbar */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
@@ -209,11 +207,12 @@ function NavigationHeader() {
             width: 240,
             background: theme.palette.background.paper,
             boxSizing: 'border-box',
+            overflowX: 'hidden', // Prevent horizontal overflow
           },
         }}
       >
         <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6" component="div" fontWeight="bold">
+          <Typography variant="h6" component="div" fontWeight="bold" noWrap>
             TrackLab
           </Typography>
           <IconButton onClick={handleDrawerToggle}>
@@ -229,13 +228,14 @@ function NavigationHeader() {
                   bgcolor: theme.palette.primary.main,
                   width: 40,
                   height: 40,
-                  mr: 2
+                  mr: 2,
+                  flexShrink: 0 // Prevent avatar from shrinking
                 }}
               >
                 {session?.user?.name?.charAt(0) || "U"}
               </Avatar>
-              <Box>
-                <Typography variant="body1" fontWeight="medium">
+              <Box sx={{ minWidth: 0, width: '100%' }}> {/* Container with proper width constraints */}
+                <Typography variant="body1" fontWeight="medium" noWrap>
                   {session?.user?.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" noWrap>
@@ -246,7 +246,7 @@ function NavigationHeader() {
             <Divider sx={{ my: 1 }} />
           </Box>
         )}
-        <List>
+        <List sx={{ width: '100%' }}>
           {navLinks.map((link, index) => (
             <ListItem 
               key={link.path} 
@@ -257,6 +257,7 @@ function NavigationHeader() {
                 borderRadius: 1,
                 mx: 1,
                 mb: 0.5,
+                width: 'auto', // Prevent items from extending beyond container
                 '&:hover': {
                   backgroundColor: `${theme.palette.primary.main}15`,
                 }
@@ -265,51 +266,13 @@ function NavigationHeader() {
               <ListItemIcon sx={{ minWidth: 40, color: theme.palette.primary.main }}>
                 {link.icon}
               </ListItemIcon>
-              <ListItemText primary={link.title} />
+              <ListItemText primary={link.title} primaryTypographyProps={{ noWrap: true }} />
             </ListItem>
           ))}
         </List>
         <Divider />
         {status === "authenticated" ? (
-          <List>
-            <ListItem 
-              key="profile"
-              component={Link} 
-              href="/profile"
-              onClick={handleDrawerToggle}
-              sx={{
-                borderRadius: 1,
-                mx: 1,
-                mb: 0.5,
-                '&:hover': {
-                  backgroundColor: `${theme.palette.primary.main}15`,
-                }
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 40, color: theme.palette.primary.main }}>
-                <PersonIcon />
-              </ListItemIcon>
-              <ListItemText primary="Profile" />
-            </ListItem>
-            <ListItem 
-              key="settings"
-              component={Link} 
-              href="/settings"
-              onClick={handleDrawerToggle}
-              sx={{
-                borderRadius: 1,
-                mx: 1,
-                mb: 0.5,
-                '&:hover': {
-                  backgroundColor: `${theme.palette.primary.main}15`,
-                }
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 40, color: theme.palette.primary.main }}>
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary="Settings" />
-            </ListItem>
+          <List sx={{ width: '100%' }}>
             <ListItem 
               key="signout"
               component={Link} 
@@ -319,6 +282,7 @@ function NavigationHeader() {
                 borderRadius: 1,
                 mx: 1,
                 mb: 0.5,
+                width: 'auto', // Prevent items from extending beyond container
                 '&:hover': {
                   backgroundColor: `${theme.palette.error.main}15`,
                 }
@@ -327,7 +291,7 @@ function NavigationHeader() {
               <ListItemIcon sx={{ minWidth: 40, color: theme.palette.error.main }}>
                 <LogoutIcon />
               </ListItemIcon>
-              <ListItemText primary="Sign Out" />
+              <ListItemText primary="Sign Out" primaryTypographyProps={{ noWrap: true }} />
             </ListItem>
           </List>
         ) : (
@@ -349,7 +313,7 @@ function NavigationHeader() {
   );
 }
 
-// User Account Component with dropdown menu
+// User Account Component with dropdown menu - Simplified to only show sign out
 function UserAccount({ status, session }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -365,7 +329,7 @@ function UserAccount({ status, session }) {
   if (status === "authenticated") {
     return (
       <Box sx={{ ml: 1 }}>
-        <Tooltip title="Account settings">
+        <Tooltip title="Account">
           <IconButton
             onClick={handleClick}
             size="small"
@@ -405,36 +369,33 @@ function UserAccount({ status, session }) {
           TransitionComponent={Fade}
           sx={{
             '& .MuiPaper-root': {
-              borderRadius: theme.shape.borderRadius,
+              borderRadius: 1, // Less rounded corners
               mt: 1.5,
               boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.15)',
-              minWidth: 180,
+              minWidth: 200, // Wider menu
+              padding: 1, // Added padding
             },
           }}
         >
           <Box sx={{ px: 2, py: 1 }}>
-            <Typography variant="subtitle2" fontWeight="medium">
+            <Typography variant="subtitle1" fontWeight="medium">
               {session?.user?.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ 
+              wordBreak: 'break-word',
+              maxWidth: '100%'
+            }}>
               {session?.user?.email}
             </Typography>
           </Box>
-          <Divider />
-          <MenuItem component={Link} href="/profile" onClick={handleClose}>
-            <ListItemIcon>
-              <PersonIcon fontSize="small" />
-            </ListItemIcon>
-            Profile
-          </MenuItem>
-          <MenuItem component={Link} href="/settings" onClick={handleClose}>
-            <ListItemIcon>
-              <SettingsIcon fontSize="small" />
-            </ListItemIcon>
-            Settings
-          </MenuItem>
-          <Divider />
-          <MenuItem component={Link} href="/api/auth/signout" onClick={handleClose}>
+          <Divider sx={{ my: 1 }} />
+          {/* Only sign out option as requested */}
+          <MenuItem 
+            component={Link} 
+            href="/api/auth/signout" 
+            onClick={handleClose}
+            sx={{ py: 1.5 }} // Increased item height for better touch targets
+          >
             <ListItemIcon>
               <LogoutIcon fontSize="small" color="error" />
             </ListItemIcon>
