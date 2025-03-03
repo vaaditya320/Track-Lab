@@ -6,9 +6,69 @@ import { useRouter, useParams } from "next/navigation";
 import axios from "axios";
 import {
   Container, Typography, Button, Card, CardContent, CircularProgress,
-  Box, Paper, Divider, Alert
+  Box, Paper, Divider, Alert, Snackbar, Chip, Grid, IconButton, Tooltip,
+  Skeleton
 } from "@mui/material";
 import { motion } from "framer-motion";
+import DownloadIcon from "@mui/icons-material/Download";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import GroupIcon from "@mui/icons-material/Group";
+import BuildIcon from "@mui/icons-material/Build";
+
+// Skeleton component for loading state
+const ProjectDetailsSkeleton = () => (
+  <Container maxWidth="md" sx={{ py: 4 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3, alignItems: "center" }}>
+      <Skeleton variant="rectangular" width={150} height={40} sx={{ borderRadius: 1 }} />
+      <Skeleton variant="rectangular" width={180} height={40} sx={{ borderRadius: 1 }} />
+    </Box>
+
+    <Card elevation={4} sx={{ borderRadius: 3, overflow: "hidden" }}>
+      <Skeleton variant="rectangular" width="100%" height={200} />
+      
+      <CardContent sx={{ p: 4 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Skeleton variant="text" width="60%" height={45} />
+          <Skeleton variant="rectangular" width={100} height={32} sx={{ borderRadius: 16 }} />
+        </Box>
+        
+        <Divider sx={{ my: 3 }} />
+        
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={6}>
+            <Box sx={{ mb: 3 }}>
+              <Skeleton variant="text" width={150} height={30} sx={{ mb: 1 }} />
+              <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
+            </Box>
+            
+            <Box sx={{ mb: 3 }}>
+              <Skeleton variant="text" width={170} height={30} sx={{ mb: 1 }} />
+              <Skeleton variant="rectangular" width="100%" height={100} sx={{ borderRadius: 2 }} />
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Box sx={{ mb: 3 }}>
+              <Skeleton variant="text" width={150} height={30} sx={{ mb: 1 }} />
+              <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
+            </Box>
+            
+            <Box sx={{ mb: 3 }}>
+              <Skeleton variant="text" width={130} height={30} sx={{ mb: 1 }} />
+              <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
+            </Box>
+          </Grid>
+        </Grid>
+
+        <Box sx={{ mt: 3 }}>
+          <Skeleton variant="text" width={160} height={30} sx={{ mb: 1 }} />
+          <Skeleton variant="rectangular" width="100%" height={150} sx={{ borderRadius: 2 }} />
+        </Box>
+      </CardContent>
+    </Card>
+  </Container>
+);
 
 export default function ProjectDetails() {
   const { data: session, status } = useSession();
@@ -18,12 +78,16 @@ export default function ProjectDetails() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [downloading, setDownloading] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: "", severity: "info" });
 
   useEffect(() => {
     if (status === "authenticated") {
       fetchProjectDetails();
+    } else if (status === "unauthenticated") {
+      router.push("/login");
     }
-  }, [status]);
+  }, [status, id]);
 
   const fetchProjectDetails = async () => {
     try {
@@ -32,25 +96,90 @@ export default function ProjectDetails() {
       });
       setProject(response.data);
     } catch (error) {
-      setError("Failed to fetch project details.");
+      console.error("Error fetching project:", error);
+      setError("Failed to fetch project details. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const response = await axios.get(`/api/projects/${id}/download`);
+      if (response.status === 200) {
+        setToast({ 
+          open: true, 
+          message: "The project summary has been emailed to you.", 
+          severity: "success" 
+        });
+      } else {
+        throw new Error("Download failed");
+      }
+    } catch (error) {
+      console.error("Error downloading summary:", error);
+      setToast({ 
+        open: true, 
+        message: "There was an issue downloading the summary.", 
+        severity: "error" 
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleCloseToast = () => {
+    setToast({ ...toast, open: false });
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  };
+
+  // Show skeleton loading state
+  if (status === "loading" || loading) {
     return (
-      <Container maxWidth="md" sx={{ display: "flex", justifyContent: "center", mt: 5 }}>
-        <CircularProgress />
-      </Container>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <ProjectDetailsSkeleton />
+      </motion.div>
     );
   }
 
   if (error) {
     return (
       <Container maxWidth="md" sx={{ mt: 5 }}>
-        <Alert severity="error">{error}</Alert>
-        <Button variant="contained" sx={{ mt: 2 }} onClick={() => router.push("/admin")}>
+        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+        <Button 
+          variant="contained" 
+          startIcon={<ArrowBackIcon />} 
+          onClick={() => router.push("/admin")}
+        >
+          Back to Dashboard
+        </Button>
+      </Container>
+    );
+  }
+
+  if (!project) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 5 }}>
+        <Alert severity="warning">Project not found</Alert>
+        <Button 
+          variant="contained" 
+          startIcon={<ArrowBackIcon />} 
+          onClick={() => router.push("/admin")}
+          sx={{ mt: 2 }}
+        >
           Back to Dashboard
         </Button>
       </Container>
@@ -58,65 +187,160 @@ export default function ProjectDetails() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
       <Container maxWidth="md" sx={{ py: 4 }}>
-        <Button variant="contained" onClick={() => router.push("/admin")} sx={{ mb: 2 }}>
-          Back to Dashboard
-        </Button>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3, alignItems: "center" }}>
+          <Button 
+            variant="contained" 
+            startIcon={<ArrowBackIcon />} 
+            onClick={() => router.push("/admin")}
+          >
+            Back to Dashboard
+          </Button>
+          
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<DownloadIcon />}
+            onClick={handleDownload}
+            disabled={downloading}
+            sx={{ 
+              backgroundColor: "#4caf50",
+              "&:hover": {
+                backgroundColor: "#388e3c",
+              }
+            }}
+          >
+            {downloading ? "Sending..." : "Download Summary"}
+          </Button>
+        </Box>
 
-        <Card elevation={3} sx={{ borderRadius: 2 }}>
-          <CardContent>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              {project.title}
-            </Typography>
-            <Divider sx={{ my: 2 }} />
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6">Leader:</Typography>
-              <Typography variant="body1">{project.leader.name} ({project.leader.regId})</Typography>
-              <Typography variant="body2" color="textSecondary">{project.leader.email}</Typography>
+        <Card elevation={4} sx={{ borderRadius: 3, overflow: "hidden" }}>
+          {project.projectPhoto && (
+            <Box 
+              sx={{ 
+                height: "200px", 
+                overflow: "hidden", 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center",
+                bgcolor: "#f5f5f5"
+              }}
+            >
+              <img 
+                src={project.projectPhoto} 
+                alt="Project" 
+                style={{ width: "100%", objectFit: "cover", objectPosition: "center" }} 
+              />
             </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6">Status:</Typography>
-              <Typography variant="body1" sx={{ fontWeight: "bold", color: project.status === "SUBMITTED" ? "green" : "orange" }}>
-                {project.status}
+          )}
+          
+          <CardContent sx={{ p: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <Typography variant="h4" fontWeight="bold" gutterBottom>
+                {project.title}
               </Typography>
+              
+              <Chip 
+                label={project.status} 
+                color={project.status === "SUBMITTED" ? "success" : "warning"}
+                sx={{ fontWeight: "bold" }}
+              />
             </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6">Team Members:</Typography>
-              <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9" }}>
-                <Typography variant="body1">
-                  {JSON.parse(project.teamMembers).join(", ")}
-                </Typography>
-              </Paper>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h6">Components:</Typography>
-              <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9" }}>
-                <Typography variant="body1">{project.components}</Typography>
-              </Paper>
-            </Box>
+            
+            <Divider sx={{ my: 3 }} />
+            
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <GroupIcon sx={{ mr: 1 }} /> Team Leader
+                  </Typography>
+                  <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                    <Typography variant="body1" fontWeight="medium">
+                      {project.leader.name} ({project.leader.regId})
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {project.leader.email}
+                    </Typography>
+                  </Paper>
+                </Box>
+                
+                {project.createdAt && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                      <CalendarTodayIcon sx={{ mr: 1 }} /> Project Timeline
+                    </Typography>
+                    <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="textSecondary">Created</Typography>
+                          <Typography variant="body1">{formatDate(project.createdAt)}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="textSecondary">Last Updated</Typography>
+                          <Typography variant="body1">{formatDate(project.updatedAt)}</Typography>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Box>
+                )}
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <GroupIcon sx={{ mr: 1 }} /> Team Members
+                  </Typography>
+                  <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                    {project.teamMembers && (
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                        {JSON.parse(project.teamMembers).map((member, index) => (
+                          <Chip key={index} label={member} size="small" sx={{ mb: 1 }} />
+                        ))}
+                      </Box>
+                    )}
+                  </Paper>
+                </Box>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <BuildIcon sx={{ mr: 1 }} /> Components
+                  </Typography>
+                  <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                    <Typography variant="body1">{project.components}</Typography>
+                  </Paper>
+                </Box>
+              </Grid>
+            </Grid>
 
             {project.summary && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="h6">Summary:</Typography>
-                <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9" }}>
-                  <Typography variant="body1">{project.summary}</Typography>
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>Project Summary</Typography>
+                <Paper elevation={1} sx={{ p: 3, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                  <Typography variant="body1" sx={{ whiteSpace: "pre-line" }}>
+                    {project.summary}
+                  </Typography>
                 </Paper>
-              </Box>
-            )}
-
-            {project.projectPhoto && (
-              <Box sx={{ textAlign: "center", mt: 3 }}>
-                <Typography variant="h6">Project Photo:</Typography>
-                <img src={project.projectPhoto} alt="Project" style={{ maxWidth: "100%", borderRadius: 8, marginTop: 10 }} />
               </Box>
             )}
           </CardContent>
         </Card>
+        
+        <Snackbar
+          open={toast.open}
+          autoHideDuration={6000}
+          onClose={handleCloseToast}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert onClose={handleCloseToast} severity={toast.severity} sx={{ width: "100%" }}>
+            {toast.message}
+          </Alert>
+        </Snackbar>
       </Container>
     </motion.div>
   );
