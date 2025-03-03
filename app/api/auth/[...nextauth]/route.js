@@ -54,6 +54,7 @@ export const authOptions = {
       if (dbUser) {
         session.user.id = dbUser.id;
         session.user.regId = dbUser.regId;
+        session.user.role = dbUser.role;
       }
 
       return session;

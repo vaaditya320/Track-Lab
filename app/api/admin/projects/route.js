@@ -6,7 +6,14 @@ const prisma = new PrismaClient();
 
 // Admin check middleware
 async function isAdmin(session) {
-  return session && session.user.email === "2023pietcsaaditya003@poornima.org";
+  if (!session || !session.user || !session.user.email) return false;
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { role: true },
+  });
+
+  return user?.role === "ADMIN";
 }
 
 // GET all projects
@@ -115,7 +122,7 @@ export async function DELETE(req, { params }) {
   }
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const deletedProject = await prisma.project.delete({
       where: { id },
     });

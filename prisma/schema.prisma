@@ -12,6 +12,7 @@ model User {
   name      String
   regId     String   @unique
   email     String   @unique
+  role      Role     @default(STUDENT) // Role field with default value
   projects  Project[] // The relation to projects remains unchanged
 }
 
@@ -30,4 +31,9 @@ model Project {
 enum Status {
   PARTIAL
   SUBMITTED
+}
+
+enum Role {
+  STUDENT
+  ADMIN
 }

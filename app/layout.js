@@ -365,7 +365,7 @@ function NavigationHeader() {
 function UserAccount({ status, session }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  const isAdmin = session?.user?.email === "2023pietcsaaditya003@poornima.org";
+  const isAdmin = session?.user?.role === "ADMIN";
   
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
