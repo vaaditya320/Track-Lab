@@ -34,6 +34,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./theme/trackLabTheme";
 import "./globals.css";
@@ -43,6 +44,9 @@ const navLinks = [
   { title: "Dashboard", path: "/", icon: <DashboardIcon /> },
   { title: "Create New", path: "/projects/create", icon: <AddCircleOutlineIcon /> },
 ];
+
+// Admin panel link - Will only show to admin users
+const adminLink = { title: "Admin Panel", path: "/admin", icon: <AdminPanelSettingsIcon /> };
 
 export default function Layout({ children }) {
   return (
@@ -85,6 +89,19 @@ function NavigationHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  // Check if the current user is an admin
+  const isAdmin = session?.user?.email === "2023pietcsaaditya003@poornima.org";
+  
+  // Get links based on user role
+  const getLinks = () => {
+    if (status === "authenticated" && isAdmin) {
+      return [...navLinks, adminLink];
+    }
+    return navLinks;
+  };
+  
+  const linksToShow = getLinks();
   
   // Handle scroll effect
   useEffect(() => {
@@ -161,7 +178,7 @@ function NavigationHeader() {
             {/* Desktop Navigation Links */}
             {!isMobile && (
               <Box sx={{ display: 'flex', mr: 2 }}>
-                {status === "authenticated" && navLinks.map((link, index) => (
+                {status === "authenticated" && linksToShow.map((link, index) => (
                   <motion.div
                     key={link.path}
                     initial={{ opacity: 0, y: -10 }}
@@ -177,7 +194,12 @@ function NavigationHeader() {
                         borderRadius: theme.shape.borderRadius,
                         '&:hover': {
                           backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        }
+                        },
+                        // Special styling for admin button
+                        ...(link.title === "Admin Panel" && {
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          fontWeight: 'bold',
+                        })
                       }}
                       startIcon={link.icon}
                     >
@@ -241,13 +263,22 @@ function NavigationHeader() {
                 <Typography variant="body2" color="text.secondary" noWrap>
                   {session?.user?.email}
                 </Typography>
+                {isAdmin && (
+                  <Typography variant="body2" sx={{ 
+                    color: theme.palette.secondary.main,
+                    fontWeight: 'bold',
+                    mt: 0.5
+                  }}>
+                    Admin
+                  </Typography>
+                )}
               </Box>
             </Box>
             <Divider sx={{ my: 1 }} />
           </Box>
         )}
         <List sx={{ width: '100%' }}>
-          {navLinks.map((link, index) => (
+          {linksToShow.map((link, index) => (
             <ListItem 
               key={link.path} 
               component={Link} 
@@ -260,13 +291,30 @@ function NavigationHeader() {
                 width: 'auto', // Prevent items from extending beyond container
                 '&:hover': {
                   backgroundColor: `${theme.palette.primary.main}15`,
-                }
+                },
+                // Special styling for admin option
+                ...(link.title === "Admin Panel" && {
+                  backgroundColor: `${theme.palette.secondary.main}15`,
+                })
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40, color: theme.palette.primary.main }}>
+              <ListItemIcon sx={{ 
+                minWidth: 40, 
+                color: link.title === "Admin Panel" 
+                  ? theme.palette.secondary.main 
+                  : theme.palette.primary.main 
+              }}>
                 {link.icon}
               </ListItemIcon>
-              <ListItemText primary={link.title} primaryTypographyProps={{ noWrap: true }} />
+              <ListItemText 
+                primary={link.title} 
+                primaryTypographyProps={{ 
+                  noWrap: true,
+                  ...(link.title === "Admin Panel" && {
+                    fontWeight: 'bold',
+                  })
+                }} 
+              />
             </ListItem>
           ))}
         </List>
@@ -317,6 +365,7 @@ function NavigationHeader() {
 function UserAccount({ status, session }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const isAdmin = session?.user?.email === "2023pietcsaaditya003@poornima.org";
   
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -338,7 +387,7 @@ function UserAccount({ status, session }) {
             aria-expanded={open ? 'true' : undefined}
             sx={{ 
               p: 0.5,
-              border: `2px solid ${theme.palette.primary.contrastText}`,
+              border: `2px solid ${isAdmin ? theme.palette.secondary.light : theme.palette.primary.contrastText}`,
               transition: 'all 0.2s ease',
               '&:hover': { 
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -349,8 +398,8 @@ function UserAccount({ status, session }) {
               sx={{ 
                 width: 32, 
                 height: 32,
-                bgcolor: theme.palette.primary.contrastText,
-                color: theme.palette.primary.main,
+                bgcolor: isAdmin ? theme.palette.secondary.light : theme.palette.primary.contrastText,
+                color: isAdmin ? theme.palette.secondary.contrastText : theme.palette.primary.main,
                 fontWeight: 'bold',
               }}
             >
@@ -387,8 +436,31 @@ function UserAccount({ status, session }) {
             }}>
               {session?.user?.email}
             </Typography>
+            {isAdmin && (
+              <Typography variant="body2" sx={{ 
+                color: theme.palette.secondary.main,
+                fontWeight: 'bold',
+                mt: 0.5
+              }}>
+                Admin
+              </Typography>
+            )}
           </Box>
           <Divider sx={{ my: 1 }} />
+          {/* Admin Panel link in dropdown for admin users */}
+          {isAdmin && (
+            <MenuItem 
+              component={Link} 
+              href="/admin" 
+              onClick={handleClose}
+              sx={{ py: 1.5 }}
+            >
+              <ListItemIcon>
+                <AdminPanelSettingsIcon fontSize="small" color="secondary" />
+              </ListItemIcon>
+              <Typography color="secondary.main" fontWeight="medium">Admin Panel</Typography>
+            </MenuItem>
+          )}
           {/* Only sign out option as requested */}
           <MenuItem 
             component={Link} 
