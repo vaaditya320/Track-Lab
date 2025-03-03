@@ -9,7 +9,7 @@ import {
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert,
   CircularProgress, Box, Grid, Card, CardContent, TextField,
   MenuItem, Select, InputLabel, FormControl, Checkbox, LinearProgress,
-  Skeleton, Tooltip
+  Skeleton
 } from "@mui/material";
 import { motion } from "framer-motion";
 
@@ -38,7 +38,7 @@ const LoadingSkeleton = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#eeeeee" }}>
-                  {[1, 2, 3, 4, 5, 6].map((item) => (
+                  {[1, 2, 3, 4, 5].map((item) => (
                     <TableCell key={item}>
                       <Skeleton variant="text" />
                     </TableCell>
@@ -48,7 +48,7 @@ const LoadingSkeleton = () => {
               <TableBody>
                 {[1, 2, 3, 4].map((row) => (
                   <TableRow key={row}>
-                    {[1, 2, 3, 4, 5, 6].map((cell) => (
+                    {[1, 2, 3, 4, 5].map((cell) => (
                       <TableCell key={cell}>
                         <Skeleton variant="text" />
                       </TableCell>
@@ -206,32 +206,29 @@ const Forbidden403 = ({ isSignedIn }) => {
   );
 };
 
-export default function AdminPage() {
+export default function AdminUsersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [projects, setProjects] = useState([]);
-  const [filteredProjects, setFilteredProjects] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [loadingProjectId, setLoadingProjectId] = useState(null);
-  const [filter, setFilter] = useState({ leader: "", status: "", search: "" });
+  const [updatingId, setUpdatingId] = useState(null);
+  const [filter, setFilter] = useState({ name: "", role: "", email: "" });
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [error, setError] = useState("");
-  const [selectedProjects, setSelectedProjects] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
-
-  // Check if user has special access
-  const hasSpecialAccess = session?.user?.email === "2023pietcsaaditya003@poornima.org";
 
   useEffect(() => {
     // Only proceed when authentication status is determined
     if (status === "loading") return;
     
     if (status === "authenticated") {
-      checkAdminAndFetchProjects();
+      checkAdminAndFetchUsers();
     } else {
       // User is not authenticated
       setInitialLoading(false);
@@ -239,21 +236,21 @@ export default function AdminPage() {
     }
   }, [status]);
 
-  const checkAdminAndFetchProjects = async () => {
+  const checkAdminAndFetchUsers = async () => {
     setInitialLoading(true);
     try {
-      const response = await axios.get("/api/admin/projects", {
-        headers: { Authorization: `Bearer ${session.user.id}` },
+      const response = await axios.get("/api/admin/users", {
+        headers: { Authorization: `Bearer ${session?.user?.id}` },
       });
-      setProjects(response.data);
-      setFilteredProjects(response.data);
+      setUsers(response.data);
+      setFilteredUsers(response.data);
       setAdminChecked(true);
     } catch (error) {
       if (error.response && error.response.status === 403) {
         setForbidden(true);
         setAdminChecked(true);
       } else {
-        setError("Failed to fetch projects");
+        setError("Failed to fetch users");
         console.error(error);
         setAdminChecked(true);
       }
@@ -263,27 +260,29 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    const filtered = projects.filter(project =>
-      (filter.leader ? project.leaderName.toLowerCase().includes(filter.leader.toLowerCase()) : true) &&
-      (filter.status ? project.status.toLowerCase() === filter.status.toLowerCase() : true) &&
-      (filter.search ? project.title.toLowerCase().includes(filter.search.toLowerCase()) || project.leaderName.toLowerCase().includes(filter.search.toLowerCase()) : true)
+    const filtered = users.filter(user =>
+      (filter.name ? user.name.toLowerCase().includes(filter.name.toLowerCase()) : true) &&
+      (filter.role ? user.role.toLowerCase() === filter.role.toLowerCase() : true) &&
+      (filter.email ? user.email.toLowerCase().includes(filter.email.toLowerCase()) : true)
     );
-    setFilteredProjects(filtered);
-  }, [filter, projects]);
+    setFilteredUsers(filtered);
+  }, [filter, users]);
 
-  const fetchProjects = async () => {
+  const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/api/admin/projects", {
-        headers: { Authorization: `Bearer ${session.user.id}` },
+      const response = await axios.get("/api/admin/users", {
+        headers: { Authorization: `Bearer ${session?.user?.id}` },
       });
-      setProjects(response.data);
-      setFilteredProjects(response.data);
+      setUsers(response.data);
+      setFilteredUsers(response.data);
+      setToast({ open: true, message: "Users refreshed successfully", severity: "success" });
     } catch (error) {
       if (error.response && error.response.status === 403) {
         setForbidden(true);
       } else {
-        setError("Failed to fetch projects");
+        setError("Failed to fetch users");
+        setToast({ open: true, message: "Failed to refresh users", severity: "error" });
         console.error(error);
       }
     } finally {
@@ -291,58 +290,52 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteProject = async (projectId) => {
-    setLoadingProjectId(projectId);
+  // Handle Promote/Demote
+  async function handleRoleChange(id, action) {
+    setUpdatingId(id);
     try {
-      await axios.delete(`/api/admin/projects/${projectId}`, {
-        headers: { Authorization: `Bearer ${session.user.id}` },
+      const res = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.user?.id}`
+        },
+        body: JSON.stringify({ id, action }),
       });
-      setToast({ open: true, message: "Project deleted successfully", severity: "success" });
-      fetchProjects();
+      
+      if (!res.ok) throw new Error("Failed to update role");
+      const updatedUser = await res.json();
+      
+      // Update state with new role
+      setUsers(users.map(user => (user.id === id ? { ...user, role: updatedUser.role } : user)));
+      setToast({ 
+        open: true, 
+        message: `User ${action === "PROMOTE" ? "promoted" : "demoted"} successfully`, 
+        severity: "success" 
+      });
     } catch (error) {
-      if (error.response && error.response.status === 403) {
-        setForbidden(true);
-      } else {
-        setToast({ open: true, message: "Failed to delete project", severity: "error" });
-      }
+      console.error(error);
+      setToast({ 
+        open: true, 
+        message: `Failed to ${action === "PROMOTE" ? "promote" : "demote"} user`, 
+        severity: "error" 
+      });
     } finally {
-      setLoadingProjectId(null);
+      setUpdatingId(null);
     }
-  };
+  }
 
-  const handleDeleteSelected = async () => {
-    if (selectedProjects.length === 0) return;
-
-    try {
-      await Promise.all(selectedProjects.map(id =>
-        axios.delete(`/api/admin/projects/${id}`, {
-          headers: { Authorization: `Bearer ${session.user.id}` },
-        })
-      ));
-      setToast({ open: true, message: "Selected projects deleted successfully", severity: "success" });
-      setSelectedProjects([]);
-      setSelectAll(false);
-      fetchProjects();
-    } catch (error) {
-      if (error.response && error.response.status === 403) {
-        setForbidden(true);
-      } else {
-        setToast({ open: true, message: "Failed to delete selected projects", severity: "error" });
-      }
-    }
-  };
-
-  const handleSelectProject = (projectId) => {
-    setSelectedProjects((prev) =>
-      prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]
+  const handleSelectUser = (userId) => {
+    setSelectedUsers((prev) =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
     );
   };
 
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedProjects([]);
+      setSelectedUsers([]);
     } else {
-      setSelectedProjects(filteredProjects.map(project => project.id));
+      setSelectedUsers(filteredUsers.map(user => user.id));
     }
     setSelectAll(!selectAll);
   };
@@ -371,62 +364,40 @@ export default function AdminPage() {
       {loading && <LinearProgress color="primary" />}
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-          <Typography variant="h4" fontWeight="bold">
-            Admin Dashboard
-          </Typography>
-          
-          {/* Special button for specific user */}
-          {hasSpecialAccess && (
-            <Tooltip title="Special User Access">
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => router.push('/admin/user-roles')}
-                sx={{ 
-                  background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
-                  boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
-                  '&:hover': {
-                    background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
-                    boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
-                  }
-                }}
-              >
-                User Management
-              </Button>
-            </Tooltip>
-          )}
-        </Box>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          User Role Management
+        </Typography>
 
         <Box sx={{ mb: 4 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={4}>
               <TextField
                 fullWidth
-                label="Search by Leader or Title"
+                label="Search by Name"
                 variant="outlined"
-                value={filter.search}
-                name="search"
+                value={filter.name}
+                name="name"
                 onChange={handleFilterChange}
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select value={filter.status} label="Status" name="status" onChange={handleFilterChange}>
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="PARTIAL">Partial</MenuItem>
-                  <MenuItem value="SUBMITTED">Submitted</MenuItem>
+                <InputLabel>Role</InputLabel>
+                <Select value={filter.role} label="Role" name="role" onChange={handleFilterChange}>
+                  <MenuItem value="">All Roles</MenuItem>
+                  <MenuItem value="ADMIN">Admin</MenuItem>
+                  <MenuItem value="STUDENT">Student</MenuItem>
+                  <MenuItem value="TEACHER">Teacher</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
               <TextField
                 fullWidth
-                label="Filter by Leader"
+                label="Search by Email"
                 variant="outlined"
-                value={filter.leader}
-                name="leader"
+                value={filter.email}
+                name="email"
                 onChange={handleFilterChange}
               />
             </Grid>
@@ -441,18 +412,22 @@ export default function AdminPage() {
 
         <Card sx={{ borderRadius: 2 }}>
           <CardContent>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Manage Projects
-            </Typography>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleDeleteSelected}
-              disabled={selectedProjects.length === 0}
-              sx={{ mb: 2 }}
-            >
-              Delete Selected
-            </Button>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" fontWeight="bold">
+                Manage Users
+              </Typography>
+              
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={fetchUsers}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                disabled={loading}
+              >
+                Refresh Users
+              </Button>
+            </Box>
+
             <TableContainer component={Paper} elevation={3}>
               <Table>
                 <TableHead>
@@ -460,36 +435,94 @@ export default function AdminPage() {
                     <TableCell>
                       <Checkbox checked={selectAll} onChange={handleSelectAll} />
                     </TableCell>
-                    <TableCell><strong>S. No.</strong></TableCell>
-                    <TableCell><strong>Project Title</strong></TableCell>
-                    <TableCell><strong>Leader</strong></TableCell>
-                    <TableCell><strong>Status</strong></TableCell>
-                    <TableCell><strong>Actions</strong></TableCell>
+                    <TableCell><strong>Name</strong></TableCell>
+                    <TableCell><strong>Email</strong></TableCell>
+                    <TableCell><strong>Role</strong></TableCell>
+                    <TableCell align="center"><strong>Actions</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredProjects.map((project, index) => (
-                    <TableRow key={project.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedProjects.includes(project.id)}
-                          onChange={() => handleSelectProject(project.id)}
-                        />
-                      </TableCell>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>{project.title}</TableCell>
-                      <TableCell>{project.leaderName}</TableCell>
-                      <TableCell>{project.status}</TableCell>
-                      <TableCell>
-                        <Button variant="contained" color="primary" onClick={() => router.push(`/admin/projects/${project.id}`)} sx={{ mr: 1 }}>
-                          View Details
-                        </Button>
-                        <Button variant="contained" color="error" onClick={() => handleDeleteProject(project.id)} disabled={loadingProjectId === project.id}>
-                          {loadingProjectId === project.id ? <CircularProgress size={24} color="inherit" /> : "Delete"}
-                        </Button>
+                  {filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                        <Typography variant="body1" color="textSecondary">
+                          No users found matching your filters
+                        </Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedUsers.includes(user.id)}
+                            onChange={() => handleSelectUser(user.id)}
+                          />
+                        </TableCell>
+                        <TableCell>{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <Box
+                            sx={{
+                              display: 'inline-block',
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: 1,
+                              backgroundColor: 
+                                user.role === "ADMIN" 
+                                  ? "rgba(255, 99, 132, 0.15)" 
+                                  : user.role === "TEACHER" 
+                                    ? "rgba(54, 162, 235, 0.15)" 
+                                    : "rgba(75, 192, 192, 0.15)",
+                              color: 
+                                user.role === "ADMIN" 
+                                  ? "rgb(255, 99, 132)" 
+                                  : user.role === "TEACHER" 
+                                    ? "rgb(54, 162, 235)" 
+                                    : "rgb(75, 192, 192)",
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {user.role}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">
+                          {user.role === "STUDENT" ? (
+                            <Button
+                              variant="contained"
+                              color="success"
+                              size="small"
+                              onClick={() => handleRoleChange(user.id, "PROMOTE")}
+                              disabled={updatingId === user.id}
+                              sx={{ mr: 1 }}
+                            >
+                              {updatingId === user.id ? <CircularProgress size={20} /> : "Promote"}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="contained"
+                              color="warning"
+                              size="small"
+                              onClick={() => handleRoleChange(user.id, "DEMOTE")}
+                              disabled={updatingId === user.id}
+                              sx={{ mr: 1 }}
+                            >
+                              {updatingId === user.id ? <CircularProgress size={20} /> : "Demote"}
+                            </Button>
+                          )}
+                          
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            onClick={() => router.push(`/admin/users/${user.id}`)}
+                          >
+                            View Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
