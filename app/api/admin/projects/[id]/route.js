@@ -4,11 +4,22 @@ import { authOptions } from "../../../auth/[...nextauth]/route";
 
 const prisma = new PrismaClient();
 
+async function isAdmin(session) {
+  if (!session || !session.user || !session.user.email) return false;
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { role: true },
+  });
+
+  return user?.role === "ADMIN";
+}
+
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
 
   // Admin check: Only admin user can access
-  if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+  if (!(await isAdmin(session))) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
@@ -38,7 +49,7 @@ export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions);
 
   // Admin check: Only admin user can access
-  if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+  if (!(await isAdmin(session))) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
@@ -70,7 +81,7 @@ export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions);
 
   // Admin check: Only admin user can access
-  if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+  if (!(await isAdmin(session))) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
