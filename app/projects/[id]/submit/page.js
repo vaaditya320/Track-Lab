@@ -185,7 +185,7 @@ export default function SubmitPage() {
             backgroundColor: "transparent",
             cursor: "pointer"
           }}
-          onClick={() => router.push(`/projects/${projectId}`)}
+          onClick={() => router.push(`/`)}
         >
           <IconButton size="small" sx={{ mr: 1 }}>
             <ArrowBackIcon />
