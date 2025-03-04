@@ -91,7 +91,7 @@ function NavigationHeader() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   // Check if the current user is an admin
-  const isAdmin = session?.user?.email === "2023pietcsaaditya003@poornima.org";
+  const isAdmin = session?.user?.role === "ADMIN";
   
   // Get links based on user role
   const getLinks = () => {
