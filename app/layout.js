@@ -38,6 +38,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./theme/trackLabTheme";
 import "./globals.css";
+import GoogleAnalytics from "@/utils/GoogleAnalytics";
 
 // Navigation links - Removed "Projects" as requested
 const navLinks = [
@@ -53,7 +54,11 @@ export default function Layout({ children }) {
     <SessionProvider>
       <ThemeProvider theme={theme}>
         <html lang="en">
+          <head>
+            <title>TrackLab</title>
+          </head>
           <body>
+            <GoogleAnalytics />
             <SpeedInsights />
             <Analytics/>
             <Fragment>
