@@ -233,7 +233,7 @@ export default function UserDetailsPage() {
                             </Box>
                           </TableCell>
                           <TableCell>
-                            {user.regId.includes('PIET') 
+                            {user.regId.includes('piet') 
                               ? 'Poornima Institute of Engineering and Technology' 
                               : 'Not Specified'}
                           </TableCell>
