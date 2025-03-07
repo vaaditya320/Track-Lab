@@ -3,6 +3,7 @@
 import { useSession, SessionProvider } from "next-auth/react";
 import Link from "next/link";
 import { Fragment, useState, useEffect } from "react";
+import { usePathname } from "next/navigation"; // Add this import for detecting current path
 import { 
   AppBar, 
   Toolbar, 
@@ -102,6 +103,7 @@ function NavigationHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const pathname = usePathname(); // Get current path
   
   // Check if the current user is an admin
   const isAdmin = session?.user?.role === "ADMIN";
@@ -115,6 +117,17 @@ function NavigationHeader() {
   };
   
   const linksToShow = getLinks();
+  
+  // Check if a link is active
+  const isActiveLink = (path) => {
+    // Exact match for root path
+    if (path === '/' && pathname === '/') {
+      return true;
+    }
+    // For other paths, check if current path starts with the link path 
+    // but make sure it's not the root path being checked against a non-root pathname
+    return path !== '/' && pathname === path;
+  };
   
   // Handle scroll effect
   useEffect(() => {
@@ -191,35 +204,55 @@ function NavigationHeader() {
             {/* Desktop Navigation Links */}
             {!isMobile && (
               <Box sx={{ display: 'flex', mr: 2 }}>
-                {status === "authenticated" && linksToShow.map((link, index) => (
-                  <motion.div
-                    key={link.path}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                  >
-                    <Button
-                      component={Link}
-                      href={link.path}
-                      color="inherit"
-                      sx={{ 
-                        mx: 0.5,
-                        borderRadius: theme.shape.borderRadius,
-                        '&:hover': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        },
-                        // Special styling for admin button
-                        ...(link.title === "Admin Panel" && {
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          fontWeight: 'bold',
-                        })
-                      }}
-                      startIcon={link.icon}
+                {status === "authenticated" && linksToShow.map((link, index) => {
+                  const isActive = isActiveLink(link.path);
+                  const isAdminButton = link.title === "Admin Panel";
+                  
+                  return (
+                    <motion.div
+                      key={link.path}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
                     >
-                      {link.title}
-                    </Button>
-                  </motion.div>
-                ))}
+                      <Button
+                        component={Link}
+                        href={link.path}
+                        color="inherit"
+                        sx={{ 
+                          mx: 0.5,
+                          borderRadius: theme.shape.borderRadius,
+                          // Admin button always has its special styling
+                          ...(isAdminButton && {
+                            backgroundColor: isActive 
+                              ? `${theme.palette.secondary.main}30` // More visible when active
+                              : 'rgba(255, 255, 255, 0.1)',
+                            fontWeight: isActive ? 'bold' : 'normal',
+                            color: theme.palette.secondary.light,
+                          }),
+                          // Non-admin buttons get standard active styling
+                          ...(!isAdminButton && isActive && {
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            fontWeight: 'bold',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                          }),
+                          '&:hover': {
+                            backgroundColor: isAdminButton
+                              ? isActive 
+                                ? `${theme.palette.secondary.main}40` 
+                                : `${theme.palette.secondary.main}20`
+                              : isActive 
+                                ? 'rgba(255, 255, 255, 0.25)' 
+                                : 'rgba(255, 255, 255, 0.1)',
+                          }
+                        }}
+                        startIcon={link.icon}
+                      >
+                        {link.title}
+                      </Button>
+                    </motion.div>
+                  );
+                })}
               </Box>
             )}
             
@@ -291,45 +324,63 @@ function NavigationHeader() {
           </Box>
         )}
         <List sx={{ width: '100%' }}>
-          {linksToShow.map((link, index) => (
-            <ListItem 
-              key={link.path} 
-              component={Link} 
-              href={link.path}
-              onClick={handleDrawerToggle}
-              sx={{
-                borderRadius: 1,
-                mx: 1,
-                mb: 0.5,
-                width: 'auto', // Prevent items from extending beyond container
-                '&:hover': {
-                  backgroundColor: `${theme.palette.primary.main}15`,
-                },
-                // Special styling for admin option
-                ...(link.title === "Admin Panel" && {
-                  backgroundColor: `${theme.palette.secondary.main}15`,
-                })
-              }}
-            >
-              <ListItemIcon sx={{ 
-                minWidth: 40, 
-                color: link.title === "Admin Panel" 
-                  ? theme.palette.secondary.main 
-                  : theme.palette.primary.main 
-              }}>
-                {link.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={link.title} 
-                primaryTypographyProps={{ 
-                  noWrap: true,
-                  ...(link.title === "Admin Panel" && {
-                    fontWeight: 'bold',
-                  })
-                }} 
-              />
-            </ListItem>
-          ))}
+          {linksToShow.map((link, index) => {
+            const isActive = isActiveLink(link.path);
+            const isAdminButton = link.title === "Admin Panel";
+            
+            return (
+              <ListItem 
+                key={link.path} 
+                component={Link} 
+                href={link.path}
+                onClick={handleDrawerToggle}
+                sx={{
+                  borderRadius: 1,
+                  mx: 1,
+                  mb: 0.5,
+                  width: 'auto', // Prevent items from extending beyond container
+                  // Admin button has special styling
+                  ...(isAdminButton && {
+                    backgroundColor: isActive
+                      ? `${theme.palette.secondary.main}25` // More visible when active
+                      : `${theme.palette.secondary.main}15`,
+                  }),
+                  // Non-admin buttons get standard active styling
+                  ...(!isAdminButton && isActive && {
+                    backgroundColor: `${theme.palette.primary.main}25`,
+                  }),
+                  '&:hover': {
+                    backgroundColor: isAdminButton
+                      ? isActive
+                        ? `${theme.palette.secondary.main}35`
+                        : `${theme.palette.secondary.main}25`
+                      : isActive
+                        ? `${theme.palette.primary.main}35`
+                        : `${theme.palette.primary.main}15`,
+                  }
+                }}
+              >
+                <ListItemIcon sx={{ 
+                  minWidth: 40, 
+                  color: isAdminButton
+                    ? theme.palette.secondary.main
+                    : isActive 
+                      ? theme.palette.primary.main
+                      : theme.palette.text.primary
+                }}>
+                  {link.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={link.title} 
+                  primaryTypographyProps={{ 
+                    noWrap: true,
+                    fontWeight: isActive ? 'bold' : 'normal',
+                    color: isAdminButton ? theme.palette.secondary.main : 'inherit'
+                  }} 
+                />
+              </ListItem>
+            );
+          })}
         </List>
         <Divider />
         {status === "authenticated" ? (
@@ -379,6 +430,7 @@ function UserAccount({ status, session }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const isAdmin = session?.user?.role === "ADMIN";
+  const pathname = usePathname(); // Get current path
   
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -466,12 +518,19 @@ function UserAccount({ status, session }) {
               component={Link} 
               href="/admin" 
               onClick={handleClose}
-              sx={{ py: 1.5 }}
+              sx={{ 
+                py: 1.5,
+                // Highlight if on admin page
+                ...(pathname === '/admin' && {
+                  backgroundColor: `${theme.palette.secondary.main}15`,
+                  fontWeight: 'bold'
+                })
+              }}
             >
               <ListItemIcon>
                 <AdminPanelSettingsIcon fontSize="small" color="secondary" />
               </ListItemIcon>
-              <Typography color="secondary.main" fontWeight="medium">Admin Panel</Typography>
+              <Typography color="secondary.main" fontWeight={pathname === '/admin' ? 'bold' : 'medium'}>Admin Panel</Typography>
             </MenuItem>
           )}
           {/* Only sign out option as requested */}
