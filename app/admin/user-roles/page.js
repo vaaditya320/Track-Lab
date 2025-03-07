@@ -156,7 +156,12 @@ const Forbidden403 = ({ isSignedIn }) => {
               Access Denied
             </Typography>
             
-            <Typography variant="body1" sx={{ mb: 3 }}>
+            <Typography variant="body1" sx={{ 
+              mb: 3, 
+              color: "#ffffff", 
+              textShadow: "0 0 5px rgba(255, 255, 255, 0.5)",
+              letterSpacing: "0.5px"
+            }}>
               {isSignedIn ? 
                 "Your clearance level is insufficient to access this secure area. This incident has been logged." :
                 "Authentication required. Please sign in to proceed with identity verification."

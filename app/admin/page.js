@@ -153,10 +153,10 @@ const Forbidden403 = ({ isSignedIn }) => {
             }}
           >
             <Typography variant="h5" sx={{ mb: 2, color: "#e94560" }}>
-              Access Denied
+              ACCESS VIOLATION // CODE: RESTRICTED
             </Typography>
             
-            <Typography variant="body1" sx={{ mb: 3 }}>
+            <Typography variant="body1" sx={{ mb: 3, color: "#ffffff", textShadow: "0 0 8px #ffffff, 0 0 12px #ffffff" }}>
               {isSignedIn ? 
                 "Your clearance level is insufficient to access this secure area. This incident has been logged." :
                 "Authentication required. Please sign in to proceed with identity verification."
@@ -182,7 +182,7 @@ const Forbidden403 = ({ isSignedIn }) => {
                     }
                   }}
                 >
-                  Return to Safety
+                  Return to Safe Zone
                 </Button>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -195,7 +195,7 @@ const Forbidden403 = ({ isSignedIn }) => {
                     "&:hover": { backgroundColor: "#c03546" }
                   }}
                 >
-                  {isSignedIn ? "Request Access" : "Sign In"}
+                  {isSignedIn ? "Request Security Clearance" : "Verify Identity"}
                 </Button>
               </Grid>
             </Grid>
