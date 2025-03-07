@@ -9,13 +9,15 @@ import {
   Box, Container, Typography, Button, Table, TableBody, TableCell, 
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, 
   CircularProgress, Skeleton, Chip, Tooltip, IconButton,
-  Card, CardContent, Grid
+  Card, CardContent, Grid, Dialog, DialogActions, DialogContent,
+  DialogContentText, DialogTitle
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddIcon from '@mui/icons-material/Add';
 import DownloadIcon from '@mui/icons-material/Download';
 import SendIcon from '@mui/icons-material/Send';
+import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "./theme/trackLabTheme";
@@ -24,14 +26,14 @@ import ProjectStatsCard from "./components/ProjectStatsCard";
 import DashboardSkeleton from "./components/DashboardSkeleton";
 
 // Project table component
-const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, handleSubmitProject }) => {
+const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, handleSubmitProject, handleDeleteClick }) => {
   return (
     <TableContainer 
       component={Paper} 
       elevation={2} 
       sx={{ 
-        borderRadius: 2, // Reduced border radius for better text visibility
-        overflow: 'auto', // Changed from 'hidden' to 'auto' for mobile scrolling
+        borderRadius: 2,
+        overflow: 'auto',
         '& .MuiTable-root': {
           borderCollapse: 'separate',
           borderSpacing: 0,
@@ -42,9 +44,9 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
         <TableHead>
           <TableRow sx={{ backgroundColor: `${theme.palette.primary.light}15` }}>
             <TableCell width="5%"><Typography variant="subtitle2">S. No.</Typography></TableCell>
-            <TableCell width="30%"><Typography variant="subtitle2">Project Name</Typography></TableCell>
+            <TableCell width="25%"><Typography variant="subtitle2">Project Name</Typography></TableCell>
             <TableCell width="15%"><Typography variant="subtitle2">Status</Typography></TableCell>
-            <TableCell width="15%"><Typography variant="subtitle2">Actions</Typography></TableCell>
+            <TableCell width="30%"><Typography variant="subtitle2">Actions</Typography></TableCell>
             <TableCell width="15%"><Typography variant="subtitle2">Submit</Typography></TableCell>
           </TableRow>
         </TableHead>
@@ -68,23 +70,37 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                 <ProjectStatusBadge status={project.status} />
               </TableCell>
               <TableCell>
-                <Tooltip title="Download project summary">
-                  <span>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Tooltip title="Download project summary">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        startIcon={loadingProjectId === project.id ? 
+                          <CircularProgress size={16} color="inherit" /> : 
+                          <DownloadIcon />}
+                        onClick={() => handleDownloadSummary(project.id)}
+                        disabled={loadingProjectId === project.id}
+                        sx={{ borderRadius: 4 }}
+                      >
+                        Summary
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Delete project">
                     <Button
                       variant="outlined"
-                      color="primary"
+                      color="error"
                       size="small"
-                      startIcon={loadingProjectId === project.id ? 
-                        <CircularProgress size={16} color="inherit" /> : 
-                        <DownloadIcon />}
-                      onClick={() => handleDownloadSummary(project.id)}
-                      disabled={loadingProjectId === project.id}
-                      sx={{ borderRadius: 4 }} // Reduced border radius
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDeleteClick(project)}
+                      sx={{ borderRadius: 4 }}
                     >
-                      Summary
+                      Delete
                     </Button>
-                  </span>
-                </Tooltip>
+                  </Tooltip>
+                </Box>
               </TableCell>
               <TableCell>
                 {project.status === "PARTIAL" ? (
@@ -95,7 +111,7 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                       size="small"
                       startIcon={<SendIcon />}
                       onClick={() => handleSubmitProject(project.id)}
-                      sx={{ borderRadius: 4 }} // Reduced border radius
+                      sx={{ borderRadius: 4 }}
                     >
                       Submit
                     </Button>
@@ -105,7 +121,7 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                     label="Submitted" 
                     color="success" 
                     size="small"
-                    sx={{ borderRadius: 4 }} // Reduced border radius
+                    sx={{ borderRadius: 4 }}
                   />
                 )}
               </TableCell>
@@ -128,7 +144,7 @@ const EmptyProjectsState = () => (
       alignItems: 'center',
       gap: 2,
       bgcolor: 'background.paper',
-      borderRadius: 2, // Reduced border radius
+      borderRadius: 2,
       boxShadow: 1,
       my: 4,
     }}
@@ -162,7 +178,7 @@ const WelcomeBanner = ({ userName }) => (
     sx={{ 
       mb: 4, 
       background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.primary.light}30)`,
-      borderRadius: 2, // Reduced border radius
+      borderRadius: 2,
       overflow: 'hidden',
       position: 'relative',
     }}
@@ -194,7 +210,7 @@ const WelcomeBanner = ({ userName }) => (
               py: 1.2,
               fontWeight: 600,
               boxShadow: 2,
-              borderRadius: 2, // Reduced border radius
+              borderRadius: 2,
             }}
           >
             New Project
@@ -214,18 +230,28 @@ export default function Home() {
   const [loadingProjectId, setLoadingProjectId] = useState(null);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [viewMode, setViewMode] = useState("table"); // table or dashboard
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, project: null, isDeleting: false });
   const router = useRouter();
+
+  const fetchProjects = async () => {
+    if (status === "authenticated") {
+      try {
+        const response = await axios.get("/api/projects", { 
+          headers: { Authorization: `Bearer ${session.user.id}` } 
+        });
+        setProjects(response.data);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        setError("There was an issue fetching your projects.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (status === "authenticated") {
-      axios
-        .get("/api/projects", { headers: { Authorization: `Bearer ${session.user.id}` } })
-        .then((response) => setProjects(response.data))
-        .catch((error) => {
-          console.error("Error fetching projects:", error);
-          setError("There was an issue fetching your projects.");
-        })
-        .finally(() => setLoading(false));
+      fetchProjects();
     } else if (status === "unauthenticated") {
       setLoading(false);
     }
@@ -251,6 +277,51 @@ export default function Home() {
 
   const handleSubmitProject = (projectId) => {
     router.push(`/projects/${projectId}/submit`);
+  };
+
+  const handleDeleteClick = (project) => {
+    setDeleteDialog({ open: true, project, isDeleting: false });
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialog({ open: false, project: null, isDeleting: false });
+  };
+
+  const handleConfirmDelete = async () => {
+    const projectId = deleteDialog.project.id;
+    setDeleteDialog(prev => ({ ...prev, isDeleting: true }));
+    
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete project');
+      }
+      
+      // Update projects list by removing the deleted project
+      setProjects(projects.filter(p => p.id !== projectId));
+      setToast({ 
+        open: true, 
+        message: "Project deleted successfully.", 
+        severity: "success" 
+      });
+    } catch (error) {
+      console.error('Error deleting project:', error.message);
+      setToast({ 
+        open: true, 
+        message: `Failed to delete project: ${error.message}`, 
+        severity: "error" 
+      });
+    } finally {
+      setDeleteDialog({ open: false, project: null, isDeleting: false });
+    }
   };
 
   // Calculate project statistics
@@ -299,7 +370,6 @@ export default function Home() {
                       <DashboardIcon />
                     </IconButton>
                   </Tooltip>
-                  {/* Removed Filter and Sort buttons as requested */}
                 </Box>
               )}
             </Box>
@@ -345,7 +415,7 @@ export default function Home() {
                   </Grid>
                 )}
 
-                <Box sx={{ overflowX: 'auto', width: '100%' }}> {/* Added wrapper with overflow-x for mobile */}
+                <Box sx={{ overflowX: 'auto', width: '100%' }}>
                   <AnimatePresence mode="wait">
                     {projects.length > 0 ? (
                       <motion.div
@@ -361,6 +431,7 @@ export default function Home() {
                           loadingProjectId={loadingProjectId}
                           handleDownloadSummary={handleDownloadSummary}
                           handleSubmitProject={handleSubmitProject}
+                          handleDeleteClick={handleDeleteClick}
                         />
                       </motion.div>
                     ) : (
@@ -386,8 +457,8 @@ export default function Home() {
                   height: "60vh",
                   flexDirection: "column",
                   backgroundColor: "white",
-                  borderRadius: 2, // Reduced border radius
-                  p: { xs: 3, sm: 6 }, // Responsive padding
+                  borderRadius: 2,
+                  p: { xs: 3, sm: 6 },
                   boxShadow: 1,
                 }}
                 component={motion.div}
@@ -406,7 +477,7 @@ export default function Home() {
                   variant="contained"
                   color="primary"
                   size="large"
-                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }} // Reduced border radius
+                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
                   onClick={() => router.push("/api/auth/signin")}
                 >
                   Login to Get Started
@@ -431,6 +502,43 @@ export default function Home() {
               {toast.message}
             </Alert>
           </Snackbar>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog
+            open={deleteDialog.open}
+            onClose={handleCloseDeleteDialog}
+            aria-labelledby="delete-dialog-title"
+            aria-describedby="delete-dialog-description"
+          >
+            <DialogTitle id="delete-dialog-title">
+              {"Delete Project?"}
+            </DialogTitle>
+            <DialogContent>
+              <DialogContentText id="delete-dialog-description">
+                Are you sure you want to delete the project{" "}
+                <strong>{deleteDialog.project?.title}</strong>? This action cannot be undone.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button 
+                onClick={handleCloseDeleteDialog} 
+                disabled={deleteDialog.isDeleting}
+                sx={{ borderRadius: 2 }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmDelete} 
+                color="error" 
+                variant="contained"
+                disabled={deleteDialog.isDeleting}
+                startIcon={deleteDialog.isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+                sx={{ borderRadius: 2 }}
+              >
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Container>
       </Box>
     </ThemeProvider>
