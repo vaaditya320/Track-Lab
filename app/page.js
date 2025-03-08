@@ -10,7 +10,7 @@ import {
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, 
   CircularProgress, Skeleton, Chip, Tooltip, IconButton,
   Card, CardContent, Grid, Dialog, DialogActions, DialogContent,
-  DialogContentText, DialogTitle
+  DialogContentText, DialogTitle, useTheme
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -19,14 +19,14 @@ import DownloadIcon from '@mui/icons-material/Download';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import { ThemeProvider } from "@mui/material/styles";
-import { theme } from "./theme/trackLabTheme";
 import ProjectStatusBadge from "./components/ProjectStatusBadge";
 import ProjectStatsCard from "./components/ProjectStatsCard";
 import DashboardSkeleton from "./components/DashboardSkeleton";
 
 // Project table component
 const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, handleSubmitProject, handleDeleteClick }) => {
+  const theme = useTheme();
+  
   return (
     <TableContainer 
       component={Paper} 
@@ -134,92 +134,100 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
 };
 
 // Empty state component
-const EmptyProjectsState = () => (
-  <Box 
-    sx={{ 
-      textAlign: 'center', 
-      py: 8,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 2,
-      bgcolor: 'background.paper',
-      borderRadius: 2,
-      boxShadow: 1,
-      my: 4,
-    }}
-    component={motion.div}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-  >
-    <FolderOpenIcon sx={{ fontSize: 64, color: 'text.disabled' }} />
-    <Typography variant="h6" color="text.secondary">
-      No projects yet
-    </Typography>
-    <Typography variant="body2" color="text.disabled" sx={{ maxWidth: 400, mb: 2, px: 2 }}>
-      Create your first project to get started tracking your progress
-    </Typography>
-    <Button 
-      variant="contained" 
-      color="primary"
-      startIcon={<AddIcon />}
-      component={Link}
-      href="/projects/create"
+const EmptyProjectsState = () => {
+  const theme = useTheme();
+  
+  return (
+    <Box 
+      sx={{ 
+        textAlign: 'center', 
+        py: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 2,
+        bgcolor: 'background.paper',
+        borderRadius: 2,
+        boxShadow: 1,
+        my: 4,
+      }}
+      component={motion.div}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
     >
-      Create First Project
-    </Button>
-  </Box>
-);
+      <FolderOpenIcon sx={{ fontSize: 64, color: 'text.disabled' }} />
+      <Typography variant="h6" color="text.secondary">
+        No projects yet
+      </Typography>
+      <Typography variant="body2" color="text.disabled" sx={{ maxWidth: 400, mb: 2, px: 2 }}>
+        Create your first project to get started tracking your progress
+      </Typography>
+      <Button 
+        variant="contained" 
+        color="primary"
+        startIcon={<AddIcon />}
+        component={Link}
+        href="/projects/create"
+      >
+        Create First Project
+      </Button>
+    </Box>
+  );
+};
 
 // Welcome banner for authenticated users
-const WelcomeBanner = ({ userName }) => (
-  <Card 
-    sx={{ 
-      mb: 4, 
-      background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.primary.light}30)`,
-      borderRadius: 2,
-      overflow: 'hidden',
-      position: 'relative',
-    }}
-    elevation={0}
-    component={motion.div}
-    initial={{ opacity: 0, y: -20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-  >
-    <CardContent sx={{ py: 3 }}>
-      <Grid container spacing={2} alignItems="center">
-        <Grid item xs={12} md={8}>
-          <Typography variant="h5" fontWeight="bold" gutterBottom>
-            Welcome back, {userName}!
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Track, manage, and submit your projects with ease.
-          </Typography>
+const WelcomeBanner = ({ userName }) => {
+  const theme = useTheme();
+  
+  return (
+    <Card 
+      sx={{ 
+        mb: 4, 
+        background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.primary.light}30)`,
+        borderRadius: 2,
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+      elevation={0}
+      component={motion.div}
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <CardContent sx={{ py: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={8}>
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+              Welcome back, {userName}!
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Track, manage, and submit your projects with ease.
+            </Typography>
+          </Grid>
+          <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: { xs: 2, md: 0 } }}>
+            <Button 
+              variant="contained" 
+              color="primary"
+              startIcon={<AddIcon />}
+              component={Link}
+              href="/projects/create"
+              sx={{ 
+                px: 3, 
+                py: 1.2,
+                fontWeight: 600,
+                boxShadow: 2,
+                borderRadius: 2,
+              }}
+            >
+              New Project
+            </Button>
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: { xs: 2, md: 0 } }}>
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<AddIcon />}
-            component={Link}
-            href="/projects/create"
-            sx={{ 
-              px: 3, 
-              py: 1.2,
-              fontWeight: 600,
-              boxShadow: 2,
-              borderRadius: 2,
-            }}
-          >
-            New Project
-          </Button>
-        </Grid>
-      </Grid>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};
 
 // Main Home component
 export default function Home() {
@@ -232,6 +240,7 @@ export default function Home() {
   const [viewMode, setViewMode] = useState("table"); // table or dashboard
   const [deleteDialog, setDeleteDialog] = useState({ open: false, project: null, isDeleting: false });
   const router = useRouter();
+  const theme = useTheme();
 
   const fetchProjects = async () => {
     if (status === "authenticated") {
@@ -332,215 +341,213 @@ export default function Home() {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <Box 
-        sx={{ 
-          minHeight: '100vh',
-          backgroundColor: theme.palette.background.default,
-          pb: 8,
-          width: '100%',
-        }}
-      >
-        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* App Header */}
-            <Box sx={{ mb: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography 
-                variant="h4" 
-                fontWeight="bold"
-                component={motion.h4}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                TrackLab
-              </Typography>
-              
-              {status === "authenticated" && (
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Tooltip title={viewMode === "table" ? "Dashboard View" : "Table View"}>
-                    <IconButton 
-                      onClick={() => setViewMode(viewMode === "table" ? "dashboard" : "table")}
-                      color="primary"
-                    >
-                      <DashboardIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              )}
-            </Box>
-
-            {loading ? (
-              <DashboardSkeleton />
-            ) : status === "authenticated" ? (
-              <>
-                <WelcomeBanner userName={session.user.name} />
-                
-                {error && (
-                  <Alert severity="error" sx={{ mb: 3 }}>
-                    {error}
-                  </Alert>
-                )}
-
-                {viewMode === "dashboard" && (
-                  <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <ProjectStatsCard 
-                        title="Total Projects"
-                        count={projectStats.total}
-                        icon="total"
-                        color={theme.palette.primary.main}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <ProjectStatsCard 
-                        title="In Progress"
-                        count={projectStats.inProgress}
-                        icon="progress"
-                        color={theme.palette.warning.main}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <ProjectStatsCard 
-                        title="Submitted"
-                        count={projectStats.submitted}
-                        icon="submitted"
-                        color={theme.palette.success.main}
-                      />
-                    </Grid>
-                  </Grid>
-                )}
-
-                <Box sx={{ overflowX: 'auto', width: '100%' }}>
-                  <AnimatePresence mode="wait">
-                    {projects.length > 0 ? (
-                      <motion.div
-                        key="projects-table"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.4 }}
-                        style={{ minWidth: '100%' }}
-                      >
-                        <ProjectsTable 
-                          projects={projects}
-                          loadingProjectId={loadingProjectId}
-                          handleDownloadSummary={handleDownloadSummary}
-                          handleSubmitProject={handleSubmitProject}
-                          handleDeleteClick={handleDeleteClick}
-                        />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="empty-state"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4 }}
-                      >
-                        <EmptyProjectsState />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </Box>
-              </>
-            ) : (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  height: "60vh",
-                  flexDirection: "column",
-                  backgroundColor: "white",
-                  borderRadius: 2,
-                  p: { xs: 3, sm: 6 },
-                  boxShadow: 1,
-                }}
-                component={motion.div}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, textAlign: "center" }}>
-                  Welcome to TrackLab
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: "center", maxWidth: 600, px: 2 }}>
-                  TrackLab helps you manage and submit your projects with ease. Sign in to start tracking your progress.
-                </Typography>
-
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
-                  onClick={() => router.push("/api/auth/signin")}
-                >
-                  Login to Get Started
-                </Button>
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        backgroundColor: theme.palette.background.default,
+        pb: 8,
+        width: '100%',
+      }}
+    >
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* App Header */}
+          <Box sx={{ mb: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography 
+              variant="h4" 
+              fontWeight="bold"
+              component={motion.h4}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              TrackLab
+            </Typography>
+            
+            {status === "authenticated" && (
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title={viewMode === "table" ? "Dashboard View" : "Table View"}>
+                  <IconButton 
+                    onClick={() => setViewMode(viewMode === "table" ? "dashboard" : "table")}
+                    color="primary"
+                  >
+                    <DashboardIcon />
+                  </IconButton>
+                </Tooltip>
               </Box>
             )}
-          </motion.div>
+          </Box>
 
-          {/* Toast Notification */}
-          <Snackbar
-            open={toast.open}
-            autoHideDuration={3000}
-            onClose={() => setToast({ ...toast, open: false })}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          >
-            <Alert 
-              severity={toast.severity} 
-              onClose={() => setToast({ ...toast, open: false })}
-              elevation={6}
-              variant="filled"
+          {loading ? (
+            <DashboardSkeleton />
+          ) : status === "authenticated" ? (
+            <>
+              <WelcomeBanner userName={session.user.name} />
+              
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
+
+              {viewMode === "dashboard" && (
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <ProjectStatsCard 
+                      title="Total Projects"
+                      count={projectStats.total}
+                      icon="total"
+                      color={theme.palette.primary.main}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <ProjectStatsCard 
+                      title="In Progress"
+                      count={projectStats.inProgress}
+                      icon="progress"
+                      color={theme.palette.warning.main}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <ProjectStatsCard 
+                      title="Submitted"
+                      count={projectStats.submitted}
+                      icon="submitted"
+                      color={theme.palette.success.main}
+                    />
+                  </Grid>
+                </Grid>
+              )}
+
+              <Box sx={{ overflowX: 'auto', width: '100%' }}>
+                <AnimatePresence mode="wait">
+                  {projects.length > 0 ? (
+                    <motion.div
+                      key="projects-table"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4 }}
+                      style={{ minWidth: '100%' }}
+                    >
+                      <ProjectsTable 
+                        projects={projects}
+                        loadingProjectId={loadingProjectId}
+                        handleDownloadSummary={handleDownloadSummary}
+                        handleSubmitProject={handleSubmitProject}
+                        handleDeleteClick={handleDeleteClick}
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="empty-state"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <EmptyProjectsState />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Box>
+            </>
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "60vh",
+                flexDirection: "column",
+                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : "white",
+                borderRadius: 2,
+                p: { xs: 3, sm: 6 },
+                boxShadow: 1,
+              }}
+              component={motion.div}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
             >
-              {toast.message}
-            </Alert>
-          </Snackbar>
+              <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, textAlign: "center" }}>
+                Welcome to TrackLab
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: "center", maxWidth: 600, px: 2 }}>
+                TrackLab helps you manage and submit your projects with ease. Sign in to start tracking your progress.
+              </Typography>
 
-          {/* Delete Confirmation Dialog */}
-          <Dialog
-            open={deleteDialog.open}
-            onClose={handleCloseDeleteDialog}
-            aria-labelledby="delete-dialog-title"
-            aria-describedby="delete-dialog-description"
-          >
-            <DialogTitle id="delete-dialog-title">
-              {"Delete Project?"}
-            </DialogTitle>
-            <DialogContent>
-              <DialogContentText id="delete-dialog-description">
-                Are you sure you want to delete the project{" "}
-                <strong>{deleteDialog.project?.title}</strong>? This action cannot be undone.
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-              <Button 
-                onClick={handleCloseDeleteDialog} 
-                disabled={deleteDialog.isDeleting}
-                sx={{ borderRadius: 2 }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleConfirmDelete} 
-                color="error" 
+              <Button
                 variant="contained"
-                disabled={deleteDialog.isDeleting}
-                startIcon={deleteDialog.isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
-                sx={{ borderRadius: 2 }}
+                color="primary"
+                size="large"
+                sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
+                onClick={() => router.push("/api/auth/signin")}
               >
-                Delete
+                Login to Get Started
               </Button>
-            </DialogActions>
-          </Dialog>
-        </Container>
-      </Box>
-    </ThemeProvider>
+            </Box>
+          )}
+        </motion.div>
+
+        {/* Toast Notification */}
+        <Snackbar
+          open={toast.open}
+          autoHideDuration={3000}
+          onClose={() => setToast({ ...toast, open: false })}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        >
+          <Alert 
+            severity={toast.severity} 
+            onClose={() => setToast({ ...toast, open: false })}
+            elevation={6}
+            variant="filled"
+          >
+            {toast.message}
+          </Alert>
+        </Snackbar>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialog.open}
+          onClose={handleCloseDeleteDialog}
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
+        >
+          <DialogTitle id="delete-dialog-title">
+            {"Delete Project?"}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="delete-dialog-description">
+              Are you sure you want to delete the project{" "}
+              <strong>{deleteDialog.project?.title}</strong>? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button 
+              onClick={handleCloseDeleteDialog} 
+              disabled={deleteDialog.isDeleting}
+              sx={{ borderRadius: 2 }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmDelete} 
+              color="error" 
+              variant="contained"
+              disabled={deleteDialog.isDeleting}
+              startIcon={deleteDialog.isDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+              sx={{ borderRadius: 2 }}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </Box>
   );
 }

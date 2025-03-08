@@ -7,7 +7,7 @@ import axios from "axios";
 import {
   Container, Typography, Button, Card, CardContent, CircularProgress,
   Box, Paper, Divider, Alert, Snackbar, Chip, Grid, IconButton, Tooltip,
-  Skeleton
+  Skeleton, useTheme
 } from "@mui/material";
 import { motion } from "framer-motion";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -17,60 +17,65 @@ import GroupIcon from "@mui/icons-material/Group";
 import BuildIcon from "@mui/icons-material/Build";
 
 // Skeleton component for loading state
-const ProjectDetailsSkeleton = () => (
-  <Container maxWidth="md" sx={{ py: 4 }}>
-    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3, alignItems: "center" }}>
-      <Skeleton variant="rectangular" width={150} height={40} sx={{ borderRadius: 1 }} />
-      <Skeleton variant="rectangular" width={180} height={40} sx={{ borderRadius: 1 }} />
-    </Box>
+const ProjectDetailsSkeleton = () => {
+  const theme = useTheme();
+  
+  return (
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3, alignItems: "center" }}>
+        <Skeleton variant="rectangular" width={150} height={40} sx={{ borderRadius: 1 }} />
+        <Skeleton variant="rectangular" width={180} height={40} sx={{ borderRadius: 1 }} />
+      </Box>
 
-    <Card elevation={4} sx={{ borderRadius: 3, overflow: "hidden" }}>
-      <Skeleton variant="rectangular" width="100%" height={200} />
-      
-      <CardContent sx={{ p: 4 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <Skeleton variant="text" width="60%" height={45} />
-          <Skeleton variant="rectangular" width={100} height={32} sx={{ borderRadius: 16 }} />
-        </Box>
+      <Card elevation={4} sx={{ borderRadius: 3, overflow: "hidden" }}>
+        <Skeleton variant="rectangular" width="100%" height={200} />
         
-        <Divider sx={{ my: 3 }} />
-        
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ mb: 3 }}>
-              <Skeleton variant="text" width={150} height={30} sx={{ mb: 1 }} />
-              <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
-            </Box>
-            
-            <Box sx={{ mb: 3 }}>
-              <Skeleton variant="text" width={170} height={30} sx={{ mb: 1 }} />
-              <Skeleton variant="rectangular" width="100%" height={100} sx={{ borderRadius: 2 }} />
-            </Box>
-          </Grid>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <Skeleton variant="text" width="60%" height={45} />
+            <Skeleton variant="rectangular" width={100} height={32} sx={{ borderRadius: 16 }} />
+          </Box>
           
-          <Grid item xs={12} md={6}>
-            <Box sx={{ mb: 3 }}>
-              <Skeleton variant="text" width={150} height={30} sx={{ mb: 1 }} />
-              <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
-            </Box>
+          <Divider sx={{ my: 3 }} />
+          
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ mb: 3 }}>
+                <Skeleton variant="text" width={150} height={30} sx={{ mb: 1 }} />
+                <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Skeleton variant="text" width={170} height={30} sx={{ mb: 1 }} />
+                <Skeleton variant="rectangular" width="100%" height={100} sx={{ borderRadius: 2 }} />
+              </Box>
+            </Grid>
             
-            <Box sx={{ mb: 3 }}>
-              <Skeleton variant="text" width={130} height={30} sx={{ mb: 1 }} />
-              <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
-            </Box>
+            <Grid item xs={12} md={6}>
+              <Box sx={{ mb: 3 }}>
+                <Skeleton variant="text" width={150} height={30} sx={{ mb: 1 }} />
+                <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Skeleton variant="text" width={130} height={30} sx={{ mb: 1 }} />
+                <Skeleton variant="rectangular" width="100%" height={90} sx={{ borderRadius: 2 }} />
+              </Box>
+            </Grid>
           </Grid>
-        </Grid>
 
-        <Box sx={{ mt: 3 }}>
-          <Skeleton variant="text" width={160} height={30} sx={{ mb: 1 }} />
-          <Skeleton variant="rectangular" width="100%" height={150} sx={{ borderRadius: 2 }} />
-        </Box>
-      </CardContent>
-    </Card>
-  </Container>
-);
+          <Box sx={{ mt: 3 }}>
+            <Skeleton variant="text" width={160} height={30} sx={{ mb: 1 }} />
+            <Skeleton variant="rectangular" width="100%" height={150} sx={{ borderRadius: 2 }} />
+          </Box>
+        </CardContent>
+      </Card>
+    </Container>
+  );
+};
 
 export default function ProjectDetails() {
+  const theme = useTheme();
   const { data: session, status } = useSession();
   const router = useRouter();
   const { id } = useParams();
@@ -204,22 +209,23 @@ export default function ProjectDetails() {
           
           <Button
             variant="contained"
-            color="primary"
+            color="success"
             startIcon={<DownloadIcon />}
             onClick={handleDownload}
             disabled={downloading}
-            sx={{ 
-              backgroundColor: "#4caf50",
-              "&:hover": {
-                backgroundColor: "#388e3c",
-              }
-            }}
           >
             {downloading ? "Sending..." : "Download Summary"}
           </Button>
         </Box>
 
-        <Card elevation={4} sx={{ borderRadius: 3, overflow: "hidden" }}>
+        <Card 
+          elevation={4} 
+          sx={{ 
+            borderRadius: 3, 
+            overflow: "hidden",
+            bgcolor: theme.palette.background.paper
+          }}
+        >
           {project.projectPhoto && (
             <Box 
               sx={{ 
@@ -228,7 +234,7 @@ export default function ProjectDetails() {
                 display: "flex", 
                 alignItems: "center", 
                 justifyContent: "center",
-                bgcolor: "#f5f5f5"
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100]
               }}
             >
               <img 
@@ -260,11 +266,18 @@ export default function ProjectDetails() {
                   <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                     <GroupIcon sx={{ mr: 1 }} /> Team Leader
                   </Typography>
-                  <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                  <Paper 
+                    elevation={1} 
+                    sx={{ 
+                      p: 2, 
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : "#f9f9f9", 
+                      borderRadius: 2 
+                    }}
+                  >
                     <Typography variant="body1" fontWeight="medium">
                       {project.leader.name} ({project.leader.regId})
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="body2" color="text.secondary">
                       {project.leader.email}
                     </Typography>
                   </Paper>
@@ -275,14 +288,21 @@ export default function ProjectDetails() {
                     <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                       <CalendarTodayIcon sx={{ mr: 1 }} /> Project Timeline
                     </Typography>
-                    <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                    <Paper 
+                      elevation={1} 
+                      sx={{ 
+                        p: 2, 
+                        backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : "#f9f9f9", 
+                        borderRadius: 2 
+                      }}
+                    >
                       <Grid container spacing={2}>
                         <Grid item xs={6}>
-                          <Typography variant="body2" color="textSecondary">Created</Typography>
+                          <Typography variant="body2" color="text.secondary">Created</Typography>
                           <Typography variant="body1">{formatDate(project.createdAt)}</Typography>
                         </Grid>
                         <Grid item xs={6}>
-                          <Typography variant="body2" color="textSecondary">Last Updated</Typography>
+                          <Typography variant="body2" color="text.secondary">Last Updated</Typography>
                           <Typography variant="body1">{formatDate(project.updatedAt)}</Typography>
                         </Grid>
                       </Grid>
@@ -296,7 +316,14 @@ export default function ProjectDetails() {
                   <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                     <GroupIcon sx={{ mr: 1 }} /> Team Members
                   </Typography>
-                  <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                  <Paper 
+                    elevation={1} 
+                    sx={{ 
+                      p: 2, 
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : "#f9f9f9", 
+                      borderRadius: 2 
+                    }}
+                  >
                     {project.teamMembers && (
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                         {JSON.parse(project.teamMembers).map((member, index) => (
@@ -311,7 +338,14 @@ export default function ProjectDetails() {
                   <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                     <BuildIcon sx={{ mr: 1 }} /> Components
                   </Typography>
-                  <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                  <Paper 
+                    elevation={1} 
+                    sx={{ 
+                      p: 2, 
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : "#f9f9f9", 
+                      borderRadius: 2 
+                    }}
+                  >
                     <Typography variant="body1">{project.components}</Typography>
                   </Paper>
                 </Box>
@@ -321,7 +355,14 @@ export default function ProjectDetails() {
             {project.summary && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" sx={{ mb: 1 }}>Project Summary</Typography>
-                <Paper elevation={1} sx={{ p: 3, backgroundColor: "#f9f9f9", borderRadius: 2 }}>
+                <Paper 
+                  elevation={1} 
+                  sx={{ 
+                    p: 3, 
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.paper : "#f9f9f9", 
+                    borderRadius: 2 
+                  }}
+                >
                   <Typography variant="body1" sx={{ whiteSpace: "pre-line" }}>
                     {project.summary}
                   </Typography>

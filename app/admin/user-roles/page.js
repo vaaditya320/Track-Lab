@@ -3,18 +3,21 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@mui/material/styles";
 import axios from "axios";
 import {
   Container, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert,
   CircularProgress, Box, Grid, Card, CardContent, TextField,
   MenuItem, Select, InputLabel, FormControl, Checkbox, LinearProgress,
-  Skeleton
+  Skeleton, alpha
 } from "@mui/material";
 import { motion } from "framer-motion";
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
+  const theme = useTheme();
+  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Skeleton variant="text" width="40%" height={60} sx={{ mb: 2 }} />
@@ -37,7 +40,7 @@ const LoadingSkeleton = () => {
           <TableContainer component={Paper} elevation={3}>
             <Table>
               <TableHead>
-                <TableRow sx={{ backgroundColor: "#eeeeee" }}>
+                <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.05) : alpha(theme.palette.common.black, 0.05) }}>
                   {[1, 2, 3, 4, 5].map((item) => (
                     <TableCell key={item}>
                       <Skeleton variant="text" />
@@ -67,6 +70,7 @@ const LoadingSkeleton = () => {
 // Futuristic 403 component
 const Forbidden403 = ({ isSignedIn }) => {
   const router = useRouter();
+  const theme = useTheme();
   const [counter, setCounter] = useState(5);
   
   useEffect(() => {
@@ -81,11 +85,13 @@ const Forbidden403 = ({ isSignedIn }) => {
     <Box
       sx={{
         height: "100vh",
-        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+        background: theme.palette.mode === 'dark' 
+          ? "linear-gradient(135deg, #0a0a14 0%, #0a1029 50%, #071830 100%)"
+          : "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "white",
+        color: theme.palette.common.white,
         overflow: "hidden",
         position: "relative"
       }}
@@ -97,7 +103,9 @@ const Forbidden403 = ({ isSignedIn }) => {
             key={i}
             style={{
               position: "absolute",
-              background: "rgba(255, 255, 255, 0.05)",
+              background: theme.palette.mode === 'dark' 
+                ? "rgba(255, 255, 255, 0.03)" 
+                : "rgba(255, 255, 255, 0.05)",
               borderRadius: "50%",
               width: Math.random() * 100 + 10,
               height: Math.random() * 100 + 10,
@@ -145,9 +153,9 @@ const Forbidden403 = ({ isSignedIn }) => {
           <Card 
             sx={{ 
               p: 4, 
-              backgroundColor: "rgba(255, 255, 255, 0.1)", 
+              backgroundColor: alpha(theme.palette.background.paper, 0.1), 
               backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
+              border: `1px solid ${alpha(theme.palette.common.white, 0.2)}`,
               borderRadius: 4,
               boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)"
             }}
@@ -158,7 +166,7 @@ const Forbidden403 = ({ isSignedIn }) => {
             
             <Typography variant="body1" sx={{ 
               mb: 3, 
-              color: "#ffffff", 
+              color: theme.palette.common.white, 
               textShadow: "0 0 5px rgba(255, 255, 255, 0.5)",
               letterSpacing: "0.5px"
             }}>
@@ -179,10 +187,10 @@ const Forbidden403 = ({ isSignedIn }) => {
                   variant="outlined" 
                   onClick={() => router.push('/')}
                   sx={{ 
-                    color: "white", 
-                    borderColor: "white",
+                    color: theme.palette.common.white, 
+                    borderColor: theme.palette.common.white,
                     "&:hover": { 
-                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      backgroundColor: alpha(theme.palette.common.white, 0.1),
                       borderColor: "#4ecca3" 
                     }
                   }}
@@ -212,6 +220,7 @@ const Forbidden403 = ({ isSignedIn }) => {
 };
 
 export default function AdminUsersPage() {
+  const theme = useTheme();
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -349,6 +358,54 @@ export default function AdminUsersPage() {
     setFilter({ ...filter, [e.target.name]: e.target.value });
   };
 
+  // Get role badge color based on role and theme
+  const getRoleBadgeStyles = (role) => {
+    const colors = {
+      ADMIN: {
+        light: {
+          bg: "rgba(255, 99, 132, 0.15)",
+          text: "rgb(255, 99, 132)"
+        },
+        dark: {
+          bg: "rgba(255, 99, 132, 0.25)",
+          text: "rgb(255, 129, 152)"
+        }
+      },
+      TEACHER: {
+        light: {
+          bg: "rgba(54, 162, 235, 0.15)",
+          text: "rgb(54, 162, 235)"
+        },
+        dark: {
+          bg: "rgba(54, 162, 235, 0.25)",
+          text: "rgb(94, 182, 245)"
+        }
+      },
+      STUDENT: {
+        light: {
+          bg: "rgba(75, 192, 192, 0.15)",
+          text: "rgb(75, 192, 192)"
+        },
+        dark: {
+          bg: "rgba(75, 192, 192, 0.25)",
+          text: "rgb(105, 212, 212)"
+        }
+      }
+    };
+    
+    const colorSet = theme.palette.mode === 'dark' ? colors[role].dark : colors[role].light;
+    
+    return {
+      display: 'inline-block',
+      px: 1.5,
+      py: 0.5,
+      borderRadius: 1,
+      backgroundColor: colorSet.bg,
+      color: colorSet.text,
+      fontWeight: 'bold'
+    };
+  };
+
   // Show loading skeleton until we've determined authentication and admin status
   if (initialLoading || !adminChecked) {
     return <LoadingSkeleton />;
@@ -436,7 +493,7 @@ export default function AdminUsersPage() {
             <TableContainer component={Paper} elevation={3}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#eeeeee" }}>
+                  <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.05) : alpha(theme.palette.common.black, 0.05) }}>
                     <TableCell>
                       <Checkbox checked={selectAll} onChange={handleSelectAll} />
                     </TableCell>
@@ -467,27 +524,7 @@ export default function AdminUsersPage() {
                         <TableCell>{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
-                          <Box
-                            sx={{
-                              display: 'inline-block',
-                              px: 1.5,
-                              py: 0.5,
-                              borderRadius: 1,
-                              backgroundColor: 
-                                user.role === "ADMIN" 
-                                  ? "rgba(255, 99, 132, 0.15)" 
-                                  : user.role === "TEACHER" 
-                                    ? "rgba(54, 162, 235, 0.15)" 
-                                    : "rgba(75, 192, 192, 0.15)",
-                              color: 
-                                user.role === "ADMIN" 
-                                  ? "rgb(255, 99, 132)" 
-                                  : user.role === "TEACHER" 
-                                    ? "rgb(54, 162, 235)" 
-                                    : "rgb(75, 192, 192)",
-                              fontWeight: 'bold'
-                            }}
-                          >
+                          <Box sx={getRoleBadgeStyles(user.role)}>
                             {user.role}
                           </Box>
                         </TableCell>

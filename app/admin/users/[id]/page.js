@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
+import { useTheme } from "@mui/material/styles";
 import axios from "axios";
 import { 
   Container, 
@@ -38,13 +39,19 @@ import { motion } from "framer-motion";
 
 // Skeleton Loading Component
 const UserDetailsSkeleton = () => {
+  const theme = useTheme();
+  
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <Skeleton variant="rectangular" width={100} height={40} />
       </Box>
 
-      <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+      <Card sx={{ 
+        borderRadius: 3, 
+        boxShadow: 3,
+        bgcolor: 'background.paper'
+      }}>
         <CardContent>
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4} display="flex" justifyContent="center">
@@ -84,6 +91,7 @@ const UserDetailsSkeleton = () => {
 };
 
 export default function UserDetailsPage() {
+  const theme = useTheme();
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -143,7 +151,7 @@ export default function UserDetailsPage() {
         <Card sx={{ 
           borderRadius: 3, 
           boxShadow: 3,
-          background: "linear-gradient(145deg, #f0f0f0 0%, #e6e6e6 100%)"
+          bgcolor: 'background.paper'
         }}>
           <CardContent>
             <Grid container spacing={3} alignItems="center">
@@ -162,7 +170,7 @@ export default function UserDetailsPage() {
               </Grid>
               
               <Grid item xs={12} md={8}>
-                <Typography variant="h4" gutterBottom>
+                <Typography variant="h4" gutterBottom color="text.primary">
                   {user.name}
                 </Typography>
                 
@@ -179,8 +187,15 @@ export default function UserDetailsPage() {
 
             <Divider sx={{ my: 3 }} />
 
-            <Paper elevation={0} sx={{ p: 3, backgroundColor: 'background.default', borderRadius: 2 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 3, 
+                bgcolor: theme.palette.mode === 'dark' ? 'background.default' : 'grey.50',
+                borderRadius: 2 
+              }}
+            >
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', color: 'text.primary' }}>
                 <InfoIcon sx={{ mr: 2, color: 'text.secondary' }} />
                 Detailed Information
               </Typography>
@@ -191,31 +206,31 @@ export default function UserDetailsPage() {
                     <Table>
                       <TableBody>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold', width: '40%' }}>
+                          <TableCell sx={{ fontWeight: 'bold', width: '40%', borderBottom: `1px solid ${theme.palette.divider}` }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <KeyIcon sx={{ mr: 2, color: 'text.secondary' }} />
                               User ID
                             </Box>
                           </TableCell>
-                          <TableCell>{user.id}</TableCell>
+                          <TableCell sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>{user.id}</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold' }}>
+                          <TableCell sx={{ fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <PersonIcon sx={{ mr: 2, color: 'text.secondary' }} />
                               Registration ID
                             </Box>
                           </TableCell>
-                          <TableCell>{user.regId}</TableCell>
+                          <TableCell sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>{user.regId}</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold' }}>
+                          <TableCell sx={{ fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <EmailIcon sx={{ mr: 2, color: 'text.secondary' }} />
                               Email
                             </Box>
                           </TableCell>
-                          <TableCell>{user.email}</TableCell>
+                          <TableCell sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>{user.email}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -226,26 +241,26 @@ export default function UserDetailsPage() {
                     <Table>
                       <TableBody>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold', width: '40%' }}>
+                          <TableCell sx={{ fontWeight: 'bold', width: '40%', borderBottom: `1px solid ${theme.palette.divider}` }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <SchoolIcon sx={{ mr: 2, color: 'text.secondary' }} />
                               Institution
                             </Box>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
                             {user.regId.includes('piet') 
                               ? 'Poornima Institute of Engineering and Technology' 
                               : 'Not Specified'}
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold' }}>
+                          <TableCell sx={{ fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <CalendarIcon sx={{ mr: 2, color: 'text.secondary' }} />
                               Cohort
                             </Box>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
                             {user.regId.match(/\d{4}/)?.[0] || 'N/A'}
                           </TableCell>
                         </TableRow>

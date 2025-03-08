@@ -1,8 +1,9 @@
-// app/theme/trackLabTheme.js
 import { createTheme } from '@mui/material/styles';
 
-export const theme = createTheme({
+// Theme creator function that accepts a mode parameter
+export const createAppTheme = (mode) => createTheme({
   palette: {
+    mode, // 'light' or 'dark'
     primary: {
       main: '#4361ee', // Professional blue
       light: '#6588ff',
@@ -16,7 +17,7 @@ export const theme = createTheme({
     },
     success: {
       main: '#06d6a0', // Mint green
-      light: '#56ffcf',
+      light: mode === 'dark' ? '#06d6a0' : '#56ffcf',
       dark: '#00a472',
     },
     warning: {
@@ -30,13 +31,13 @@ export const theme = createTheme({
       dark: '#b91646',
     },
     background: {
-      default: '#f8fafc', // Very light blue-gray
-      paper: '#ffffff',
+      default: mode === 'dark' ? '#121212' : '#f8fafc', // Dark mode background
+      paper: mode === 'dark' ? '#1e1e1e' : '#ffffff',
     },
     text: {
-      primary: '#1e293b', // Dark blue-gray
-      secondary: '#64748b', // Medium blue-gray
-      disabled: '#94a3b8', // Light blue-gray
+      primary: mode === 'dark' ? '#e2e8f0' : '#1e293b', // Adjusted for dark mode
+      secondary: mode === 'dark' ? '#94a3b8' : '#64748b',
+      disabled: mode === 'dark' ? '#475569' : '#94a3b8',
     },
   },
   typography: {
@@ -91,7 +92,9 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          boxShadow: mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.2)'
+            : '0 4px 12px rgba(0,0,0,0.05)',
         },
       },
     },
@@ -102,7 +105,7 @@ export const theme = createTheme({
         },
         head: {
           fontWeight: 600,
-          backgroundColor: '#f8fafc',
+          backgroundColor: mode === 'dark' ? '#1e1e1e' : '#f8fafc',
         },
       },
     },
@@ -129,6 +132,13 @@ export const theme = createTheme({
         },
       },
     },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none', // Removes the background pattern in dark mode
+        },
+      },
+    },
   },
   shadows: [
     'none',
@@ -140,3 +150,6 @@ export const theme = createTheme({
     ...Array(19).fill('none'), // Fill the rest with none
   ],
 });
+
+// For backward compatibility, export a default theme too
+export const theme = createAppTheme('light');

@@ -2,15 +2,14 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Box, Container, Typography, Button } from "@mui/material";
-import { ThemeProvider } from "@mui/material/styles";
-import { theme } from "./theme/trackLabTheme";
+import { useTheme } from "@mui/material/styles";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import * as THREE from "three";
-import { FontLoader } from "three/examples/jsm/loaders/FontLoader";
 
 // Typewriter effect for streaming text
 const TypewriterText = ({ text, delay = 40 }) => {
+  const theme = useTheme();
   const [displayedText, setDisplayedText] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -56,6 +55,7 @@ const TypewriterText = ({ text, delay = 40 }) => {
 
 // Background 3D Animation Component
 const BackgroundAnimation = () => {
+  const theme = useTheme();
   const mountRef = useRef(null);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ const BackgroundAnimation = () => {
     particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
     particlesGeometry.setAttribute('scale', new THREE.BufferAttribute(scaleArray, 1));
     
-    // Create different particle types
+    // Create different particle types with theme colors
     const createParticles = (color, size, count) => {
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(count * 3);
@@ -114,7 +114,7 @@ const BackgroundAnimation = () => {
       
       const material = new THREE.PointsMaterial({
         size,
-        color,
+        color: new THREE.Color(color),
         transparent: true,
         opacity: 0.6,
       });
@@ -145,7 +145,7 @@ const BackgroundAnimation = () => {
       ];
       
       const material = new THREE.MeshBasicMaterial({
-        color: colors[Math.floor(Math.random() * colors.length)],
+        color: new THREE.Color(colors[Math.floor(Math.random() * colors.length)]),
         transparent: true,
         opacity: 0.7,
         wireframe: Math.random() > 0.5,
@@ -224,7 +224,7 @@ const BackgroundAnimation = () => {
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [theme]);
   
   return (
     <Box 
@@ -244,6 +244,7 @@ const BackgroundAnimation = () => {
 
 // Main 3D feature component for the right side
 const MainFeature3D = () => {
+  const theme = useTheme();
   const mountRef = useRef(null);
 
   useEffect(() => {
@@ -282,7 +283,7 @@ const MainFeature3D = () => {
     // Create a glowing wireframe globe
     const globeGeometry = new THREE.IcosahedronGeometry(1.5, 5);
     const globeMaterial = new THREE.MeshBasicMaterial({
-      color: theme.palette.primary.main,
+      color: new THREE.Color(theme.palette.primary.main),
       wireframe: true,
       transparent: true,
       opacity: 0.7,
@@ -290,43 +291,10 @@ const MainFeature3D = () => {
     const globe = new THREE.Mesh(globeGeometry, globeMaterial);
     scene.add(globe);
     
-    // Create a floating "404" text with FontLoader (fallback to cube if font loading fails)
-    const createTextGeometry = (font) => {
-      try {
-        const textGeometry = new THREE.TextGeometry("404", {
-          font: font,
-          size: 0.8,
-          height: 0.1,
-          curveSegments: 12,
-          bevelEnabled: true,
-          bevelThickness: 0.03,
-          bevelSize: 0.02,
-          bevelOffset: 0,
-          bevelSegments: 5
-        });
-        
-        textGeometry.center();
-        
-        const textMaterial = new THREE.MeshBasicMaterial({
-          color: theme.palette.error.main,
-          wireframe: true,
-        });
-        
-        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        textMesh.position.set(0, 0, 0);
-        scene.add(textMesh);
-        
-        return textMesh;
-      } catch (error) {
-        console.error("Error creating text geometry:", error);
-        return null;
-      }
-    };
-    
     // Create a ring
     const ringGeometry = new THREE.TorusGeometry(2.3, 0.1, 16, 100);
     const ringMaterial = new THREE.MeshBasicMaterial({
-      color: theme.palette.secondary.main,
+      color: new THREE.Color(theme.palette.secondary.main),
       wireframe: true,
       transparent: true,
       opacity: 0.7,
@@ -338,7 +306,7 @@ const MainFeature3D = () => {
     // Create a secondary ring
     const ring2Geometry = new THREE.TorusGeometry(2, 0.05, 16, 100);
     const ring2Material = new THREE.MeshBasicMaterial({
-      color: theme.palette.primary.light,
+      color: new THREE.Color(theme.palette.primary.light),
       wireframe: true,
       transparent: true,
       opacity: 0.5,
@@ -396,7 +364,7 @@ const MainFeature3D = () => {
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [theme]);
   
   return (
     <Box 
@@ -412,137 +380,137 @@ const MainFeature3D = () => {
 };
 
 export default function NotFound() {
+  const theme = useTheme();
+  
   return (
-    <ThemeProvider theme={theme}>
-      <Box
-        sx={{
-          minHeight: '100vh',
-          width: '100%',
-          backgroundColor: theme.palette.background.default,
-          overflow: 'hidden',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          position: 'relative',
-        }}
-      >
-        {/* Background 3D elements that float across the entire page */}
-        <BackgroundAnimation />
-        
-        <Container maxWidth="lg" sx={{ p: 0, position: 'relative', zIndex: 1 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        width: '100%',
+        backgroundColor: 'background.default',
+        overflow: 'hidden',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+      }}
+    >
+      {/* Background 3D elements that float across the entire page */}
+      <BackgroundAnimation />
+      
+      <Container maxWidth="lg" sx={{ p: 0, position: 'relative', zIndex: 1 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: '100vh',
+            py: { xs: 4, md: 0 },
+          }}
+        >
+          {/* Text Content */}
           <Box
             sx={{
+              width: { xs: '100%', md: '50%' },
+              p: { xs: 3, md: 5 },
               display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              minHeight: '100vh',
-              py: { xs: 4, md: 0 },
+              flexDirection: 'column',
+              justifyContent: 'center',
+              zIndex: 2,
             }}
           >
-            {/* Text Content */}
-            <Box
-              sx={{
-                width: { xs: '100%', md: '50%' },
-                p: { xs: 3, md: 5 },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                zIndex: 2,
-              }}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
+              <Typography
+                variant="h1"
+                fontWeight="bold"
+                sx={{
+                  fontSize: { xs: '4rem', md: '6rem' },
+                  letterSpacing: '-0.05em',
+                  mb: 2,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.error.main})`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
               >
-                <Typography
-                  variant="h1"
-                  fontWeight="bold"
-                  sx={{
-                    fontSize: { xs: '4rem', md: '6rem' },
-                    letterSpacing: '-0.05em',
-                    mb: 2,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.error.main})`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  404
-                </Typography>
-              </motion.div>
+                404
+              </Typography>
+            </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.5 }}
-              >
-                <TypewriterText text="Error: This page could not be found. It either doesn't exist or was deleted. Or perhaps you don't exist and this webpage couldn't find you." />
-              </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            >
+              <TypewriterText text="Error: This page could not be found. It either doesn't exist or was deleted. Or perhaps you don't exist and this webpage couldn't find you." />
+            </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 1.5 }}
-                style={{ marginTop: '5rem' }}
-              >
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  component={Link}
-                  href="/"
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    borderRadius: 2,
-                    boxShadow: 3,
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::after': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.5 }}
+              style={{ marginTop: '7rem' }}
+            >
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                component={Link}
+                href="/"
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: `linear-gradient(to right, transparent, ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'}, transparent)`,
+                    animation: 'shimmer 2s infinite',
+                  },
+                  '@keyframes shimmer': {
+                    '0%': {
                       left: '-100%',
-                      width: '100%',
-                      height: '100%',
-                      background: `linear-gradient(to right, transparent, ${theme.palette.primary.light}40, transparent)`,
-                      animation: 'shimmer 2s infinite',
                     },
-                    '@keyframes shimmer': {
-                      '0%': {
-                        left: '-100%',
-                      },
-                      '100%': {
-                        left: '100%',
-                      },
+                    '100%': {
+                      left: '100%',
                     },
-                  }}
-                >
-                  Return to Dashboard
-                </Button>
-              </motion.div>
-            </Box>
-
-            {/* Main 3D Animation */}
-            <Box
-              sx={{
-                width: { xs: '100%', md: '50%' },
-                height: { xs: '50vh', md: '70vh' },
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'relative',
-                zIndex: 2,
-              }}
-            >
-              <MainFeature3D />
-            </Box>
+                  },
+                }}
+              >
+                Return to Dashboard
+              </Button>
+            </motion.div>
           </Box>
-        </Container>
-      </Box>
-    </ThemeProvider>
+
+          {/* Main 3D Animation */}
+          <Box
+            sx={{
+              width: { xs: '100%', md: '50%' },
+              height: { xs: '50vh', md: '70vh' },
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              position: 'relative',
+              zIndex: 2,
+            }}
+          >
+            <MainFeature3D />
+          </Box>
+        </Box>
+      </Container>
+    </Box>
   );
 }

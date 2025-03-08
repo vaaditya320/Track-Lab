@@ -9,12 +9,14 @@ import {
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert,
   CircularProgress, Box, Grid, Card, CardContent, TextField,
   MenuItem, Select, InputLabel, FormControl, Checkbox, LinearProgress,
-  Skeleton, Tooltip
+  Skeleton, Tooltip, useTheme
 } from "@mui/material";
 import { motion } from "framer-motion";
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
+  const theme = useTheme();
+  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Skeleton variant="text" width="40%" height={60} sx={{ mb: 2 }} />
@@ -37,7 +39,7 @@ const LoadingSkeleton = () => {
           <TableContainer component={Paper} elevation={3}>
             <Table>
               <TableHead>
-                <TableRow sx={{ backgroundColor: "#eeeeee" }}>
+                <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
                   {[1, 2, 3, 4, 5, 6].map((item) => (
                     <TableCell key={item}>
                       <Skeleton variant="text" />
@@ -67,6 +69,7 @@ const LoadingSkeleton = () => {
 // Futuristic 403 component
 const Forbidden403 = ({ isSignedIn }) => {
   const router = useRouter();
+  const theme = useTheme();
   const [counter, setCounter] = useState(5);
   
   useEffect(() => {
@@ -81,11 +84,13 @@ const Forbidden403 = ({ isSignedIn }) => {
     <Box
       sx={{
         height: "100vh",
-        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+        background: theme.palette.mode === 'dark'
+          ? "linear-gradient(135deg, #0a0a14 0%, #0b1121 50%, #071a30 100%)"
+          : "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: "white",
+        color: theme.palette.common.white,
         overflow: "hidden",
         position: "relative"
       }}
@@ -97,7 +102,9 @@ const Forbidden403 = ({ isSignedIn }) => {
             key={i}
             style={{
               position: "absolute",
-              background: "rgba(255, 255, 255, 0.05)",
+              background: theme.palette.mode === 'dark' 
+                ? "rgba(255, 255, 255, 0.03)" 
+                : "rgba(255, 255, 255, 0.05)",
               borderRadius: "50%",
               width: Math.random() * 100 + 10,
               height: Math.random() * 100 + 10,
@@ -147,7 +154,9 @@ const Forbidden403 = ({ isSignedIn }) => {
               p: 4, 
               backgroundColor: "rgba(255, 255, 255, 0.1)", 
               backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
+              border: `1px solid ${theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.1)' 
+                : 'rgba(255, 255, 255, 0.2)'}`,
               borderRadius: 4,
               boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)"
             }}
@@ -156,7 +165,7 @@ const Forbidden403 = ({ isSignedIn }) => {
               ACCESS VIOLATION // CODE: RESTRICTED
             </Typography>
             
-            <Typography variant="body1" sx={{ mb: 3, color: "#ffffff", textShadow: "0 0 8px #ffffff, 0 0 12px #ffffff" }}>
+            <Typography variant="body1" sx={{ mb: 3, color: theme.palette.common.white, textShadow: "0 0 8px #ffffff, 0 0 12px #ffffff" }}>
               {isSignedIn ? 
                 "Your clearance level is insufficient to access this secure area. This incident has been logged." :
                 "Authentication required. Please sign in to proceed with identity verification."
@@ -174,8 +183,8 @@ const Forbidden403 = ({ isSignedIn }) => {
                   variant="outlined" 
                   onClick={() => router.push('/')}
                   sx={{ 
-                    color: "white", 
-                    borderColor: "white",
+                    color: theme.palette.common.white, 
+                    borderColor: theme.palette.common.white,
                     "&:hover": { 
                       backgroundColor: "rgba(255, 255, 255, 0.1)",
                       borderColor: "#4ecca3" 
@@ -209,6 +218,7 @@ const Forbidden403 = ({ isSignedIn }) => {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const theme = useTheme();
 
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
@@ -439,7 +449,11 @@ export default function AdminPage() {
           </Typography>
         )}
 
-        <Card sx={{ borderRadius: 2 }}>
+        <Card sx={{ 
+          borderRadius: 2,
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary
+        }}>
           <CardContent>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Manage Projects
@@ -453,10 +467,12 @@ export default function AdminPage() {
             >
               Delete Selected
             </Button>
-            <TableContainer component={Paper} elevation={3}>
+            <TableContainer component={Paper} elevation={3} sx={{ 
+              bgcolor: theme.palette.background.paper
+            }}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#eeeeee" }}>
+                  <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
                     <TableCell>
                       <Checkbox checked={selectAll} onChange={handleSelectAll} />
                     </TableCell>
@@ -469,7 +485,11 @@ export default function AdminPage() {
                 </TableHead>
                 <TableBody>
                   {filteredProjects.map((project, index) => (
-                    <TableRow key={project.id}>
+                    <TableRow key={project.id} sx={{
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover
+                      }
+                    }}>
                       <TableCell>
                         <Checkbox
                           checked={selectedProjects.includes(project.id)}

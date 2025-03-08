@@ -21,7 +21,8 @@ import {
   Avatar,
   Stack,
   Chip,
-  IconButton
+  IconButton,
+  useTheme
 } from "@mui/material";
 import { motion } from "framer-motion";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -33,6 +34,7 @@ export default function SubmitPage() {
   const router = useRouter();
   const params = useParams();
   const projectId = params?.id;
+  const theme = useTheme();
 
   const [project, setProject] = useState(null);
   const [summary, setSummary] = useState("");
@@ -198,7 +200,9 @@ export default function SubmitPage() {
           sx={{ 
             borderRadius: 2,
             overflow: "hidden",
-            backgroundImage: "linear-gradient(to bottom right, rgba(255,255,255,0.8), rgba(255,255,255,0.9))",
+            backgroundImage: theme => theme.palette.mode === 'dark' 
+              ? 'linear-gradient(to bottom right, rgba(30,30,30,0.8), rgba(40,40,40,0.9))' 
+              : 'linear-gradient(to bottom right, rgba(255,255,255,0.8), rgba(255,255,255,0.9))',
             backdropFilter: "blur(10px)",
           }}
         >
@@ -288,11 +292,11 @@ export default function SubmitPage() {
                   <Paper
                     elevation={0}
                     sx={{
-                      border: '2px dashed #ccc',
+                      border: theme => `2px dashed ${theme.palette.mode === 'dark' ? '#555' : '#ccc'}`,
                       borderRadius: 2,
                       p: 3,
                       textAlign: 'center',
-                      backgroundColor: previewUrl ? 'transparent' : '#f8f9fa',
+                      backgroundColor: theme => previewUrl ? 'transparent' : (theme.palette.mode === 'dark' ? 'rgba(30,30,30,0.5)' : '#f8f9fa'),
                       position: 'relative',
                       height: 320,
                       display: 'flex',
@@ -332,7 +336,7 @@ export default function SubmitPage() {
                       </Box>
                     ) : (
                       <>
-                        <CloudUploadIcon sx={{ fontSize: 60, color: '#9e9e9e', mb: 2 }} />
+                        <CloudUploadIcon sx={{ fontSize: 60, color: theme => theme.palette.mode === 'dark' ? '#777' : '#9e9e9e', mb: 2 }} />
                         <Typography variant="body1" gutterBottom>
                           Drag and drop your project photo here
                         </Typography>
@@ -397,9 +401,13 @@ export default function SubmitPage() {
               borderBottomLeftRadius: 8,
               borderBottomRightRadius: 8,
               height: 6,
-              backgroundColor: toast.severity === "success" ? "rgba(27, 94, 32, 0.3)" : "rgba(183, 28, 28, 0.3)",
+              backgroundColor: theme => toast.severity === "success" 
+                ? (theme.palette.mode === 'dark' ? 'rgba(27, 94, 32, 0.5)' : 'rgba(27, 94, 32, 0.3)')
+                : (theme.palette.mode === 'dark' ? 'rgba(183, 28, 28, 0.5)' : 'rgba(183, 28, 28, 0.3)'),
               "& .MuiLinearProgress-bar": {
-                backgroundColor: toast.severity === "success" ? "#4CAF50" : "#E53935",
+                backgroundColor: theme => toast.severity === "success" 
+                  ? theme.palette.success.main 
+                  : theme.palette.error.main,
               },
             }}
           />
