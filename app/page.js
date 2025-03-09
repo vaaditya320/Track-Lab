@@ -10,7 +10,7 @@ import {
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, 
   CircularProgress, Skeleton, Chip, Tooltip, IconButton,
   Card, CardContent, Grid, Dialog, DialogActions, DialogContent,
-  DialogContentText, DialogTitle, useTheme
+  DialogContentText, DialogTitle, useTheme, useMediaQuery
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -19,117 +19,268 @@ import DownloadIcon from '@mui/icons-material/Download';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import CloseIcon from '@mui/icons-material/Close';
 import ProjectStatusBadge from "./components/ProjectStatusBadge";
 import ProjectStatsCard from "./components/ProjectStatsCard";
 import DashboardSkeleton from "./components/DashboardSkeleton";
 
-// Project table component
+// Project table component with responsive design
 const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, handleSubmitProject, handleDeleteClick }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [selectedProject, setSelectedProject] = useState(null);
+  
+  const handleProjectClick = (project) => {
+    if (isMobile) {
+      setSelectedProject(project);
+    }
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedProject(null);
+  };
   
   return (
-    <TableContainer 
-      component={Paper} 
-      elevation={2} 
-      sx={{ 
-        borderRadius: 2,
-        overflow: 'auto',
-        '& .MuiTable-root': {
-          borderCollapse: 'separate',
-          borderSpacing: 0,
-        },
-      }}
-    >
-      <Table>
-        <TableHead>
-          <TableRow sx={{ backgroundColor: `${theme.palette.primary.light}15` }}>
-            <TableCell width="5%"><Typography variant="subtitle2">S. No.</Typography></TableCell>
-            <TableCell width="25%"><Typography variant="subtitle2">Project Name</Typography></TableCell>
-            <TableCell width="15%"><Typography variant="subtitle2">Status</Typography></TableCell>
-            <TableCell width="30%"><Typography variant="subtitle2">Actions</Typography></TableCell>
-            <TableCell width="15%"><Typography variant="subtitle2">Submit</Typography></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {projects.map((project, index) => (
-            <TableRow 
-              key={project.id} 
-              hover
-              component={motion.tr}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-            >
-              <TableCell>{index + 1}</TableCell>
-              <TableCell>
-                <Typography variant="body1" fontWeight={500}>
-                  {project.title}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <ProjectStatusBadge status={project.status} />
-              </TableCell>
-              <TableCell>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Tooltip title="Download project summary">
-                    <span>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        startIcon={loadingProjectId === project.id ? 
-                          <CircularProgress size={16} color="inherit" /> : 
-                          <DownloadIcon />}
-                        onClick={() => handleDownloadSummary(project.id)}
-                        disabled={loadingProjectId === project.id}
-                        sx={{ borderRadius: 4 }}
-                      >
-                        Summary
-                      </Button>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title="Delete project">
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => handleDeleteClick(project)}
-                      sx={{ borderRadius: 4 }}
-                    >
-                      Delete
-                    </Button>
-                  </Tooltip>
-                </Box>
-              </TableCell>
-              <TableCell>
-                {project.status === "PARTIAL" ? (
-                  <Tooltip title="Submit your project">
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      size="small"
-                      startIcon={<SendIcon />}
-                      onClick={() => handleSubmitProject(project.id)}
-                      sx={{ borderRadius: 4 }}
-                    >
-                      Submit
-                    </Button>
-                  </Tooltip>
-                ) : (
-                  <Chip 
-                    label="Submitted" 
-                    color="success" 
-                    size="small"
-                    sx={{ borderRadius: 4 }}
-                  />
-                )}
-              </TableCell>
+    <>
+      <TableContainer 
+        component={Paper} 
+        elevation={2} 
+        sx={{ 
+          borderRadius: 2,
+          overflow: 'auto',
+          '& .MuiTable-root': {
+            borderCollapse: 'separate',
+            borderSpacing: 0,
+          },
+        }}
+      >
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: `${theme.palette.primary.light}15` }}>
+              <TableCell width="5%"><Typography variant="subtitle2">S. No.</Typography></TableCell>
+              <TableCell width="25%"><Typography variant="subtitle2">Project Name</Typography></TableCell>
+              <TableCell width="15%"><Typography variant="subtitle2">Status</Typography></TableCell>
+              {!isMobile && (
+                <>
+                  <TableCell width="30%"><Typography variant="subtitle2">Actions</Typography></TableCell>
+                  <TableCell width="15%"><Typography variant="subtitle2">Submit</Typography></TableCell>
+                </>
+              )}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {projects.map((project, index) => (
+              <TableRow 
+                key={project.id} 
+                hover
+                component={motion.tr}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                onClick={() => handleProjectClick(project)}
+                sx={isMobile ? { cursor: 'pointer' } : {}}
+              >
+                <TableCell>{index + 1}</TableCell>
+                <TableCell>
+                  <Typography variant="body1" fontWeight={500}>
+                    {project.title}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <ProjectStatusBadge status={project.status} />
+                </TableCell>
+                {!isMobile && (
+                  <>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Tooltip title="Download project summary">
+                          <span>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              size="small"
+                              startIcon={loadingProjectId === project.id ? 
+                                <CircularProgress size={16} color="inherit" /> : 
+                                <DownloadIcon />}
+                              onClick={() => handleDownloadSummary(project.id)}
+                              disabled={loadingProjectId === project.id}
+                              sx={{ borderRadius: 4 }}
+                            >
+                              Summary
+                            </Button>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Delete project">
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            startIcon={<DeleteIcon />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(project);
+                            }}
+                            sx={{ borderRadius: 4 }}
+                          >
+                            Delete
+                          </Button>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      {project.status === "PARTIAL" ? (
+                        <Tooltip title="Submit your project">
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            startIcon={<SendIcon />}
+                            onClick={() => handleSubmitProject(project.id)}
+                            sx={{ borderRadius: 4 }}
+                          >
+                            Submit
+                          </Button>
+                        </Tooltip>
+                      ) : (
+                        <Chip 
+                          label="Submitted" 
+                          color="success" 
+                          size="small"
+                          sx={{ borderRadius: 4 }}
+                        />
+                      )}
+                    </TableCell>
+                  </>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Mobile Project Details Dialog - FIXED */}
+      <Dialog
+        open={Boolean(selectedProject)}
+        onClose={handleCloseDetails}
+        fullWidth
+        maxWidth="sm"
+        sx={{
+          '& .MuiDialog-paper': {
+            borderRadius: 2,
+            m: { xs: 1, sm: 2 },
+          },
+        }}
+      >
+        {selectedProject && (
+          <>
+            <DialogTitle 
+              sx={{ 
+                pb: 1, 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                fontWeight: 600
+              }}
+            >
+              Project Details
+              <IconButton 
+                onClick={handleCloseDetails}
+                size="small"
+                aria-label="close"
+                edge="end"
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Project Name
+                </Typography>
+                <Typography variant="h6" fontWeight={500}>
+                  {selectedProject.title}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Status
+                </Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  <ProjectStatusBadge status={selectedProject.status} />
+                </Box>
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Actions
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    startIcon={loadingProjectId === selectedProject.id ? 
+                      <CircularProgress size={16} color="inherit" /> : 
+                      <DownloadIcon />}
+                    onClick={() => {
+                      handleDownloadSummary(selectedProject.id);
+                      handleCloseDetails();
+                    }}
+                    disabled={loadingProjectId === selectedProject.id}
+                    sx={{ borderRadius: 4 }}
+                  >
+                    Download Summary
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => {
+                      handleDeleteClick(selectedProject);
+                      handleCloseDetails();
+                    }}
+                    sx={{ borderRadius: 4 }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, py: 2 }}>
+              {selectedProject.status === "PARTIAL" ? (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  startIcon={<SendIcon />}
+                  onClick={() => {
+                    handleSubmitProject(selectedProject.id);
+                    handleCloseDetails();
+                  }}
+                  sx={{ borderRadius: 4 }}
+                >
+                  Submit Project
+                </Button>
+              ) : (
+                <Chip 
+                  label="Project Already Submitted" 
+                  color="success" 
+                  size="medium"
+                  sx={{ 
+                    borderRadius: 4, 
+                    py: 2.5,
+                    width: '100%',
+                    justifyContent: 'center'
+                  }}
+                />
+              )}
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+    </>
   );
 };
 
@@ -423,7 +574,7 @@ export default function Home() {
                 </Grid>
               )}
 
-              <Box sx={{ overflowX: 'auto', width: '100%' }}>
+              <Box sx={{ width: '100%' }}>
                 <AnimatePresence mode="wait">
                   {projects.length > 0 ? (
                     <motion.div
@@ -432,7 +583,7 @@ export default function Home() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.4 }}
-                      style={{ minWidth: '100%' }}
+                      style={{ width: '100%' }}
                     >
                       <ProjectsTable 
                         projects={projects}
