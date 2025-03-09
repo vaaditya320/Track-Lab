@@ -9,13 +9,21 @@ import {
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert,
   CircularProgress, Box, Grid, Card, CardContent, TextField,
   MenuItem, Select, InputLabel, FormControl, Checkbox, LinearProgress,
-  Skeleton, Tooltip, useTheme
+  Skeleton, Tooltip, useTheme, Dialog, DialogTitle, DialogContent, 
+  DialogActions, IconButton, useMediaQuery, Divider, ListItem,
+  List, ListItemText, ListItemSecondaryAction, Chip, DialogContentText,
+  SwipeableDrawer
 } from "@mui/material";
 import { motion } from "framer-motion";
+import CloseIcon from '@mui/icons-material/Close';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DeleteIcon from '@mui/icons-material/Delete';
+import InfoIcon from '@mui/icons-material/Info';
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -40,8 +48,8 @@ const LoadingSkeleton = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
-                  {[1, 2, 3, 4, 5, 6].map((item) => (
-                    <TableCell key={item}>
+                  {[...Array(isMobile ? 3 : 6)].map((_, i) => (
+                    <TableCell key={i}>
                       <Skeleton variant="text" />
                     </TableCell>
                   ))}
@@ -50,8 +58,8 @@ const LoadingSkeleton = () => {
               <TableBody>
                 {[1, 2, 3, 4].map((row) => (
                   <TableRow key={row}>
-                    {[1, 2, 3, 4, 5, 6].map((cell) => (
-                      <TableCell key={cell}>
+                    {[...Array(isMobile ? 3 : 6)].map((_, i) => (
+                      <TableCell key={i}>
                         <Skeleton variant="text" />
                       </TableCell>
                     ))}
@@ -215,10 +223,148 @@ const Forbidden403 = ({ isSignedIn }) => {
   );
 };
 
+// Project Details Dialog Component
+const ProjectDetailsDialog = ({ open, project, onClose, onDelete, loading }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  if (!project) return null;
+  
+  return (
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs" // Changed from "sm" to "xs" to make it smaller
+      fullScreen={false} // Changed from isMobile to false to prevent fullscreen on mobile
+      sx={{
+        '& .MuiDialog-paper': {
+          borderRadius: 2,
+          margin: isMobile ? '16px' : 'auto', // Add margins on mobile
+          maxHeight: isMobile ? 'calc(100% - 32px)' : '80vh' // Limit height on mobile
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        padding: '12px 16px' // Reduced padding
+      }}>
+        <Typography variant="subtitle1" component="div">
+          Project Details
+        </Typography>
+        <IconButton edge="end" color="inherit" onClick={onClose} aria-label="close" size="small">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers sx={{ padding: '16px', paddingBottom: '8px' }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="h6" component="div" gutterBottom>
+            {project.title}
+          </Typography>
+          <Chip 
+            label={project.status} 
+            color={project.status === "SUBMITTED" ? "success" : "warning"}
+            size="small"
+            sx={{ mb: 1 }}
+          />
+        </Box>
+        
+        <List dense disablePadding>
+          <ListItem divider sx={{ py: 1 }}>
+            <ListItemText 
+              primary="Project ID" 
+              secondary={project.id} 
+              primaryTypographyProps={{ variant: 'body2' }}
+              secondaryTypographyProps={{ variant: 'caption' }}
+            />
+          </ListItem>
+          <ListItem divider sx={{ py: 1 }}>
+            <ListItemText 
+              primary="Project Leader" 
+              secondary={project.leaderName} 
+              primaryTypographyProps={{ variant: 'body2' }}
+              secondaryTypographyProps={{ variant: 'caption' }}
+            />
+          </ListItem>
+          <ListItem sx={{ py: 1 }}>
+            <ListItemText 
+              primary="Status" 
+              secondary={project.status} 
+              primaryTypographyProps={{ variant: 'body2' }}
+              secondaryTypographyProps={{ variant: 'caption' }}
+            />
+          </ListItem>
+        </List>
+      </DialogContent>
+      <DialogActions sx={{ 
+        justifyContent: 'space-between',
+        p: 2
+      }}>
+        <Button 
+          onClick={() => { onClose(); window.location.href = `/admin/projects/${project.id}`; }}
+          color="primary" 
+          variant="outlined"
+          size="small"
+        >
+          View Full Details
+        </Button>
+        <Button 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            onDelete(project.id);
+          }}
+          color="error" 
+          variant="contained"
+          size="small"
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+        >
+          Delete
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Confirmation Dialog for delete operations
+const DeleteConfirmationDialog = ({ open, onClose, onConfirm, multiple, loading }) => {
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Confirm Deletion</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          {multiple 
+            ? "Are you sure you want to delete all selected projects? This action cannot be undone."
+            : "Are you sure you want to delete this project? This action cannot be undone."}
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="primary">
+          Cancel
+        </Button>
+        <Button 
+          onClick={onConfirm} 
+          color="error" 
+          variant="contained"
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+        >
+          {loading ? "Deleting..." : "Delete"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
@@ -232,6 +378,12 @@ export default function AdminPage() {
   const [selectAll, setSelectAll] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
+  
+  // Mobile specific states
+  const [detailsDialog, setDetailsDialog] = useState({ open: false, project: null });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, multiple: false });
+  const [mobileSelectionMode, setMobileSelectionMode] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState(null);
 
   // Check if user has special access
   const hasSpecialAccess = session?.user?.email === "2023pietcsaaditya003@poornima.org";
@@ -280,6 +432,15 @@ export default function AdminPage() {
     );
     setFilteredProjects(filtered);
   }, [filter, projects]);
+  
+  // Clean up any hanging timers when component unmounts
+  useEffect(() => {
+    return () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+      }
+    };
+  }, [longPressTimer]);
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -308,7 +469,10 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${session.user.id}` },
       });
       setToast({ open: true, message: "Project deleted successfully", severity: "success" });
-      fetchProjects();
+      // Close the details dialog immediately after deletion
+      setDetailsDialog({ open: false, project: null });
+      // Refresh the projects list
+      await fetchProjects();
     } catch (error) {
       if (error.response && error.response.status === 403) {
         setForbidden(true);
@@ -322,7 +486,8 @@ export default function AdminPage() {
 
   const handleDeleteSelected = async () => {
     if (selectedProjects.length === 0) return;
-
+    
+    setLoading(true);
     try {
       await Promise.all(selectedProjects.map(id =>
         axios.delete(`/api/admin/projects/${id}`, {
@@ -332,13 +497,18 @@ export default function AdminPage() {
       setToast({ open: true, message: "Selected projects deleted successfully", severity: "success" });
       setSelectedProjects([]);
       setSelectAll(false);
-      fetchProjects();
+      await fetchProjects();
+      setMobileSelectionMode(false);
+      // Close the delete confirmation dialog after deletion
+      setDeleteDialog({ open: false, multiple: false });
     } catch (error) {
       if (error.response && error.response.status === 403) {
         setForbidden(true);
       } else {
         setToast({ open: true, message: "Failed to delete selected projects", severity: "error" });
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -359,6 +529,57 @@ export default function AdminPage() {
 
   const handleFilterChange = (e) => {
     setFilter({ ...filter, [e.target.name]: e.target.value });
+  };
+  
+  // Mobile specific handlers
+  const handleRowClick = (e, project) => {
+    // If we're in selection mode on mobile, handle selection
+    if (isMobile && mobileSelectionMode) {
+      e.preventDefault();
+      handleSelectProject(project.id);
+      return;
+    }
+    
+    // Otherwise, show the details
+    if (isMobile) {
+      setDetailsDialog({ open: true, project });
+    }
+  };
+  
+  const handleRowTouchStart = (e, project) => {
+    if (!isMobile) return;
+    
+    const timer = setTimeout(() => {
+      // Enter selection mode and select this project
+      setMobileSelectionMode(true);
+      handleSelectProject(project.id);
+      
+      // Provide haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500); // Long press threshold (500ms)
+    
+    setLongPressTimer(timer);
+  };
+  
+  const handleRowTouchEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+  
+  const handleRowTouchMove = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+  
+  const handleExitSelectionMode = () => {
+    setMobileSelectionMode(false);
+    setSelectedProjects([]);
   };
 
   // Show loading skeleton until we've determined authentication and admin status
@@ -381,8 +602,14 @@ export default function AdminPage() {
       {loading && <LinearProgress color="primary" />}
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-          <Typography variant="h4" fontWeight="bold">
+        <Box sx={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: isMobile ? "flex-start" : "center",
+          flexDirection: isMobile ? "column" : "row",
+          mb: 3 
+        }}>
+          <Typography variant="h4" fontWeight="bold" sx={{ mb: isMobile ? 2 : 0 }}>
             Admin Dashboard
           </Typography>
           
@@ -393,6 +620,7 @@ export default function AdminPage() {
                 variant="contained"
                 color="secondary"
                 onClick={() => router.push('/admin/user-roles')}
+                fullWidth={isMobile}
                 sx={{ 
                   background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
                   boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
@@ -455,67 +683,170 @@ export default function AdminPage() {
           color: theme.palette.text.primary
         }}>
           <CardContent>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Manage Projects
-            </Typography>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleDeleteSelected}
-              disabled={selectedProjects.length === 0}
-              sx={{ mb: 2 }}
-            >
-              Delete Selected
-            </Button>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 2
+            }}>
+              <Typography variant="h6" fontWeight="bold">
+                Manage Projects
+              </Typography>
+              
+              {/* Mobile selection mode actions */}
+              {isMobile && mobileSelectionMode && (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="body2" sx={{ mr: 1 }}>
+                    {selectedProjects.length} selected
+                  </Typography>
+                  <Button 
+                    size="small" 
+                    onClick={handleExitSelectionMode}
+                    sx={{ mr: 1 }}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+              )}
+            </Box>
+            
+            {/* Delete Selected button - show for desktop or mobile in selection mode */}
+            {(!isMobile || (isMobile && mobileSelectionMode)) && (
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => {
+                  if (selectedProjects.length > 0) {
+                    setDeleteDialog({ open: true, multiple: true });
+                  }
+                }}
+                disabled={selectedProjects.length === 0}
+                sx={{ mb: 2 }}
+              >
+                Delete Selected ({selectedProjects.length})
+              </Button>
+            )}
+            
             <TableContainer component={Paper} elevation={3} sx={{ 
-              bgcolor: theme.palette.background.paper
+              bgcolor: theme.palette.background.paper,
+              overflowX: 'auto'
             }}>
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: theme.palette.action.hover }}>
-                    <TableCell>
-                      <Checkbox checked={selectAll} onChange={handleSelectAll} />
-                    </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        <Checkbox checked={selectAll} onChange={handleSelectAll} />
+                      </TableCell>
+                    )}
                     <TableCell><strong>S. No.</strong></TableCell>
                     <TableCell><strong>Project Title</strong></TableCell>
-                    <TableCell><strong>Leader</strong></TableCell>
+                    {!isMobile && <TableCell><strong>Leader</strong></TableCell>}
                     <TableCell><strong>Status</strong></TableCell>
-                    <TableCell><strong>Actions</strong></TableCell>
+                    {!isMobile && <TableCell><strong>Actions</strong></TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredProjects.map((project, index) => (
-                    <TableRow key={project.id} sx={{
-                      '&:hover': {
-                        backgroundColor: theme.palette.action.hover
-                      }
-                    }}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedProjects.includes(project.id)}
-                          onChange={() => handleSelectProject(project.id)}
-                        />
-                      </TableCell>
+                    <TableRow 
+                      key={project.id} 
+                      onClick={(e) => handleRowClick(e, project)}
+                      onTouchStart={(e) => handleRowTouchStart(e, project)}
+                      onTouchEnd={handleRowTouchEnd}
+                      onTouchMove={handleRowTouchMove}
+                      sx={{
+                        cursor: 'pointer',
+                        backgroundColor: selectedProjects.includes(project.id) 
+                          ? theme.palette.action.selected 
+                          : 'inherit',
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover
+                        }
+                      }}
+                    >
+                      {!isMobile && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedProjects.includes(project.id)}
+                            onChange={() => handleSelectProject(project.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{project.title}</TableCell>
-                      <TableCell>{project.leaderName}</TableCell>
-                      <TableCell>{project.status}</TableCell>
+                      {!isMobile && <TableCell>{project.leaderName}</TableCell>}
                       <TableCell>
-                        <Button variant="contained" color="primary" onClick={() => router.push(`/admin/projects/${project.id}`)} sx={{ mr: 1 }}>
-                          View Details
-                        </Button>
-                        <Button variant="contained" color="error" onClick={() => handleDeleteProject(project.id)} disabled={loadingProjectId === project.id}>
-                          {loadingProjectId === project.id ? <CircularProgress size={24} color="inherit" /> : "Delete"}
-                        </Button>
+                        <Chip 
+                          label={project.status} 
+                          size="small"
+                          color={project.status === "SUBMITTED" ? "success" : "warning"}
+                        />
                       </TableCell>
+                      {!isMobile && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            variant="contained" 
+                            color="primary" 
+                            onClick={() => router.push(`/admin/projects/${project.id}`)} 
+                            sx={{ mr: 1 }}
+                          >
+                            View Details
+                          </Button>
+                          <Button 
+                            variant="contained" 
+                            color="error" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProject(project.id);
+                            }}
+                            disabled={loadingProjectId === project.id}
+                          >
+                            {loadingProjectId === project.id ? 
+                              <CircularProgress size={24} color="inherit" /> : 
+                              "Delete"
+                            }
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
+            
+            {/* Empty state */}
+            {filteredProjects.length === 0 && !loading && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body1" color="text.secondary">
+                  No projects found matching your filters.
+                </Typography>
+              </Box>
+            )}
           </CardContent>
         </Card>
-
+        
+        {/* Project Details Dialog */}
+        <ProjectDetailsDialog 
+          open={detailsDialog.open}
+          project={detailsDialog.project}
+          onClose={() => setDetailsDialog({ open: false, project: null })}
+          onDelete={handleDeleteProject}
+          loading={loading || loadingProjectId === detailsDialog.project?.id}
+        />
+        
+        <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, multiple: false })}
+        onConfirm={() => {
+            if (deleteDialog.multiple) {
+              handleDeleteSelected();
+            } else {
+              handleDeleteProject(deleteDialog.projectId);
+            }
+          }}
+        multiple={deleteDialog.multiple}
+        loading={loading}
+        />
         <Snackbar
           open={toast.open}
           autoHideDuration={6000}

@@ -4,14 +4,17 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import axios from "axios";
 import {
   Container, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Snackbar, Alert,
   CircularProgress, Box, Grid, Card, CardContent, TextField,
-  MenuItem, Select, InputLabel, FormControl, Checkbox, LinearProgress,
-  Skeleton, alpha
+  MenuItem, Select, InputLabel, FormControl, LinearProgress,
+  Skeleton, alpha, Dialog, DialogTitle, DialogContent, DialogActions,
+  Divider, IconButton
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { motion } from "framer-motion";
 
 // LoadingSkeleton component
@@ -41,7 +44,7 @@ const LoadingSkeleton = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.05) : alpha(theme.palette.common.black, 0.05) }}>
-                  {[1, 2, 3, 4, 5].map((item) => (
+                  {[1, 2, 3, 4].map((item) => (
                     <TableCell key={item}>
                       <Skeleton variant="text" />
                     </TableCell>
@@ -51,7 +54,7 @@ const LoadingSkeleton = () => {
               <TableBody>
                 {[1, 2, 3, 4].map((row) => (
                   <TableRow key={row}>
-                    {[1, 2, 3, 4, 5].map((cell) => (
+                    {[1, 2, 3, 4].map((cell) => (
                       <TableCell key={cell}>
                         <Skeleton variant="text" />
                       </TableCell>
@@ -64,6 +67,136 @@ const LoadingSkeleton = () => {
         </CardContent>
       </Card>
     </Container>
+  );
+};
+
+// User Details Dialog
+const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updatingId, router }) => {
+  const theme = useTheme();
+
+  if (!user) return null;
+
+  const getRoleBadgeStyles = (role) => {
+    const colors = {
+      ADMIN: {
+        light: {
+          bg: "rgba(255, 99, 132, 0.15)",
+          text: "rgb(255, 99, 132)"
+        },
+        dark: {
+          bg: "rgba(255, 99, 132, 0.25)",
+          text: "rgb(255, 129, 152)"
+        }
+      },
+      STUDENT: {
+        light: {
+          bg: "rgba(75, 192, 192, 0.15)",
+          text: "rgb(75, 192, 192)"
+        },
+        dark: {
+          bg: "rgba(75, 192, 192, 0.25)",
+          text: "rgb(105, 212, 212)"
+        }
+      }
+    };
+    
+    const colorSet = theme.palette.mode === 'dark' ? colors[role].dark : colors[role].light;
+    
+    return {
+      display: 'inline-block',
+      px: 1.5,
+      py: 0.5,
+      borderRadius: 1,
+      backgroundColor: colorSet.bg,
+      color: colorSet.text,
+      fontWeight: 'bold'
+    };
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          bgcolor: theme.palette.background.paper
+        }
+      }}
+    >
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Fix: Don't nest Typography variants that create different heading levels */}
+        <Typography component="span" variant="h6" fontWeight="bold">User Details</Typography>
+        <IconButton onClick={handleClose} size="small">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+            Name
+          </Typography>
+          <Typography variant="body1" fontWeight="medium">
+            {user.name}
+          </Typography>
+        </Box>
+        
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+            Email
+          </Typography>
+          <Typography variant="body1">
+            {user.email}
+          </Typography>
+        </Box>
+        
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+            Role
+          </Typography>
+          <Box sx={getRoleBadgeStyles(user.role)}>
+            {user.role}
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ flexDirection: 'column', p: 3, gap: 2 }}>
+        {user.role === "STUDENT" ? (
+          <Button
+            variant="contained"
+            color="success"
+            fullWidth
+            onClick={() => handleRoleChange(user.id, "PROMOTE")}
+            disabled={updatingId === user.id}
+          >
+            {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Admin"}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            color="warning"
+            fullWidth
+            onClick={() => handleRoleChange(user.id, "DEMOTE")}
+            disabled={updatingId === user.id}
+          >
+            {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Student"}
+          </Button>
+        )}
+        
+        <Button
+          variant="outlined"
+          color="primary"
+          fullWidth
+          onClick={() => {
+            router.push(`/admin/users/${user.id}`);
+            handleClose();
+          }}
+        >
+          View Full Profile
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
@@ -160,7 +293,8 @@ const Forbidden403 = ({ isSignedIn }) => {
               boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)"
             }}
           >
-            <Typography variant="h5" sx={{ mb: 2, color: "#e94560" }}>
+            {/* Fix: Don't nest Typography variants that create different heading levels */}
+            <Typography component="div" variant="h5" sx={{ mb: 2, color: "#e94560" }}>
               Access Denied
             </Typography>
             
@@ -221,6 +355,7 @@ const Forbidden403 = ({ isSignedIn }) => {
 
 export default function AdminUsersPage() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -232,10 +367,12 @@ export default function AdminUsersPage() {
   const [filter, setFilter] = useState({ name: "", role: "", email: "" });
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [error, setError] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
+  
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
     // Only proceed when authentication status is determined
@@ -305,57 +442,58 @@ export default function AdminUsersPage() {
   };
 
   // Handle Promote/Demote
-  async function handleRoleChange(id, action) {
-    setUpdatingId(id);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.user?.id}`
-        },
-        body: JSON.stringify({ id, action }),
-      });
-      
-      if (!res.ok) throw new Error("Failed to update role");
-      const updatedUser = await res.json();
-      
-      // Update state with new role
-      setUsers(users.map(user => (user.id === id ? { ...user, role: updatedUser.role } : user)));
-      setToast({ 
-        open: true, 
-        message: `User ${action === "PROMOTE" ? "promoted" : "demoted"} successfully`, 
-        severity: "success" 
-      });
-    } catch (error) {
-      console.error(error);
-      setToast({ 
-        open: true, 
-        message: `Failed to ${action === "PROMOTE" ? "promote" : "demote"} user`, 
-        severity: "error" 
-      });
-    } finally {
-      setUpdatingId(null);
-    }
+async function handleRoleChange(id, action) {
+  setUpdatingId(id);
+  try {
+    const res = await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.user?.id}`
+      },
+      body: JSON.stringify({ id, action }),
+    });
+    
+    if (!res.ok) throw new Error("Failed to update role");
+    const updatedUser = await res.json();
+    
+    // Update state with new role
+    setUsers(users.map(user => (user.id === id ? { ...user, role: updatedUser.role } : user)));
+    setToast({ 
+      open: true, 
+      message: `User ${action === "PROMOTE" ? "promoted" : "demoted"} successfully`, 
+      severity: "success" 
+    });
+    
+    // Close the dialog after successful update
+    setDialogOpen(false);
+  } catch (error) {
+    console.error(error);
+    setToast({ 
+      open: true, 
+      message: `Failed to ${action === "PROMOTE" ? "promote" : "demote"} user`, 
+      severity: "error" 
+    });
+  } finally {
+    setUpdatingId(null);
   }
-
-  const handleSelectUser = (userId) => {
-    setSelectedUsers((prev) =>
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(filteredUsers.map(user => user.id));
-    }
-    setSelectAll(!selectAll);
-  };
+}
 
   const handleFilterChange = (e) => {
     setFilter({ ...filter, [e.target.name]: e.target.value });
+  };
+
+  // Handle row click for mobile view
+  const handleRowClick = (user) => {
+    if (isMobile) {
+      setSelectedUser(user);
+      setDialogOpen(true);
+    }
+  };
+
+  // Close user details dialog
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
   };
 
   // Get role badge color based on role and theme
@@ -369,16 +507,6 @@ export default function AdminUsersPage() {
         dark: {
           bg: "rgba(255, 99, 132, 0.25)",
           text: "rgb(255, 129, 152)"
-        }
-      },
-      TEACHER: {
-        light: {
-          bg: "rgba(54, 162, 235, 0.15)",
-          text: "rgb(54, 162, 235)"
-        },
-        dark: {
-          bg: "rgba(54, 162, 235, 0.25)",
-          text: "rgb(94, 182, 245)"
         }
       },
       STUDENT: {
@@ -449,7 +577,6 @@ export default function AdminUsersPage() {
                   <MenuItem value="">All Roles</MenuItem>
                   <MenuItem value="ADMIN">Admin</MenuItem>
                   <MenuItem value="STUDENT">Student</MenuItem>
-                  <MenuItem value="TEACHER">Teacher</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -475,7 +602,8 @@ export default function AdminUsersPage() {
         <Card sx={{ borderRadius: 2 }}>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" fontWeight="bold">
+              {/* Fix: Ensure we don't create nested heading levels */}
+              <Typography component="div" variant="h6" fontWeight="bold">
                 Manage Users
               </Typography>
               
@@ -494,74 +622,85 @@ export default function AdminUsersPage() {
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.05) : alpha(theme.palette.common.black, 0.05) }}>
-                    <TableCell>
-                      <Checkbox checked={selectAll} onChange={handleSelectAll} />
-                    </TableCell>
+                    <TableCell width="10%"><strong>#</strong></TableCell>
                     <TableCell><strong>Name</strong></TableCell>
-                    <TableCell><strong>Email</strong></TableCell>
+                    {!isMobile && <TableCell><strong>Email</strong></TableCell>}
                     <TableCell><strong>Role</strong></TableCell>
-                    <TableCell align="center"><strong>Actions</strong></TableCell>
+                    {!isMobile && <TableCell align="center"><strong>Actions</strong></TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                      <TableCell colSpan={isMobile ? 3 : 5} align="center" sx={{ py: 3 }}>
                         <Typography variant="body1" color="textSecondary">
                           No users found matching your filters
                         </Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={() => handleSelectUser(user.id)}
-                          />
-                        </TableCell>
+                    filteredUsers.map((user, index) => (
+                      <TableRow 
+                        key={user.id} 
+                        onClick={() => handleRowClick(user)}
+                        sx={{ 
+                          cursor: isMobile ? 'pointer' : 'default',
+                          '&:hover': { bgcolor: isMobile ? alpha(theme.palette.primary.main, 0.08) : 'inherit' }
+                        }}
+                      >
+                        <TableCell>{index + 1}</TableCell>
                         <TableCell>{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
+                        {!isMobile && <TableCell>{user.email}</TableCell>}
                         <TableCell>
                           <Box sx={getRoleBadgeStyles(user.role)}>
                             {user.role}
                           </Box>
                         </TableCell>
-                        <TableCell align="center">
-                          {user.role === "STUDENT" ? (
+                        {!isMobile && (
+                          <TableCell align="center">
+                            {user.role === "STUDENT" ? (
+                              <Button
+                                variant="contained"
+                                color="success"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRoleChange(user.id, "PROMOTE");
+                                }}
+                                disabled={updatingId === user.id}
+                                sx={{ mr: 1 }}
+                              >
+                                {updatingId === user.id ? <CircularProgress size={20} /> : "Promote"}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="contained"
+                                color="warning"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRoleChange(user.id, "DEMOTE");
+                                }}
+                                disabled={updatingId === user.id}
+                                sx={{ mr: 1 }}
+                              >
+                                {updatingId === user.id ? <CircularProgress size={20} /> : "Demote"}
+                              </Button>
+                            )}
+                            
                             <Button
-                              variant="contained"
-                              color="success"
+                              variant="outlined"
+                              color="primary"
                               size="small"
-                              onClick={() => handleRoleChange(user.id, "PROMOTE")}
-                              disabled={updatingId === user.id}
-                              sx={{ mr: 1 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/admin/users/${user.id}`);
+                              }}
                             >
-                              {updatingId === user.id ? <CircularProgress size={20} /> : "Promote"}
+                              View Details
                             </Button>
-                          ) : (
-                            <Button
-                              variant="contained"
-                              color="warning"
-                              size="small"
-                              onClick={() => handleRoleChange(user.id, "DEMOTE")}
-                              disabled={updatingId === user.id}
-                              sx={{ mr: 1 }}
-                            >
-                              {updatingId === user.id ? <CircularProgress size={20} /> : "Demote"}
-                            </Button>
-                          )}
-                          
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            size="small"
-                            onClick={() => router.push(`/admin/users/${user.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        </TableCell>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   )}
@@ -570,6 +709,16 @@ export default function AdminUsersPage() {
             </TableContainer>
           </CardContent>
         </Card>
+
+        {/* User Details Dialog for Mobile */}
+        <UserDetailsDialog
+          open={dialogOpen}
+          handleClose={handleCloseDialog}
+          user={selectedUser}
+          handleRoleChange={handleRoleChange}
+          updatingId={updatingId}
+          router={router}
+        />
 
         <Snackbar
           open={toast.open}
