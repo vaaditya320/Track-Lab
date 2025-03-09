@@ -125,7 +125,7 @@ export default function Layout({ children }) {
             <meta name="description" content="TrackLab helps you manage and track projects efficiently with real-time updates, file uploads, and seamless collaboration." />
             <meta property="og:title" content="TrackLab - Project Tracking Platform" />
             <meta property="og:description" content="TrackLab helps you manage and track projects efficiently with real-time updates, file uploads, and seamless collaboration." />
-            <meta property="og:image" content="https://tracklab.aadityavinayak.in.net/og-image.png" />
+            <meta property="og:image" content="https://tracklab.aadityavinayak.in.net/512x512.png" />
             <meta property="og:url" content="https://tracklab.aadityavinayak.in.net" />
             <meta property="og:type" content="website" />
             <meta property="og:site_name" content="TrackLab" />
