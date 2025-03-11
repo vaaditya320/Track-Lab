@@ -131,6 +131,7 @@ export default function Layout({ children }) {
             <meta property="og:site_name" content="TrackLab" />
             <meta property="og:locale" content="en_US" />
             <link rel="manifest" href="/manifest.json" />
+            <link rel="icon" href="/favicon.ico" />
 
             {/* Add this to prevent flash of default theme */}
             <style id="theme-initial-css">{`
