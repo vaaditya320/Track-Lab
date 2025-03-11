@@ -37,6 +37,7 @@ import ExtensionIcon from '@mui/icons-material/Extension';
 import SaveIcon from '@mui/icons-material/Save';
 import HomeIcon from '@mui/icons-material/Home';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import PersonIcon from '@mui/icons-material/Person';
 
 // Loading skeleton for create project page
 const CreateProjectSkeleton = () => {
@@ -104,7 +105,7 @@ export default function CreateProject() {
   const theme = useTheme();
 
   const [title, setTitle] = useState("");
-  const [numMembers, setNumMembers] = useState(1);
+  const [numMembers, setNumMembers] = useState(1); // Changed to start with 1 additional member
   const [teamMembers, setTeamMembers] = useState([]);
   const [borrowedComponents, setBorrowedComponents] = useState("");
   const [error, setError] = useState("");
@@ -125,8 +126,8 @@ export default function CreateProject() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !borrowedComponents || teamMembers.some((member) => !member)) {
-      setError("Please fill in all fields.");
+    if (!title || !borrowedComponents || (numMembers > 0 && teamMembers.some((member) => !member))) {
+      setError("Please fill in all required fields.");
       return;
     }
 
@@ -134,9 +135,10 @@ export default function CreateProject() {
     setError("");
 
     try {
+      // Include creator (current user) automatically
       const projectData = {
         title,
-        teamMembers: teamMembers,
+        teamMembers: numMembers === 0 ? ["N/A"] : teamMembers, // Use N/A for solo projects
         components: borrowedComponents,
       };
 
@@ -289,54 +291,83 @@ export default function CreateProject() {
                     />
                   </Grid>
 
+                  {/* Current user info */}
+                  <Grid item xs={12}>
+                    <Box sx={{ 
+                      p: 2, 
+                      borderRadius: 2, 
+                      bgcolor: 'background.paper',
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      mb: 1
+                    }}>
+                      <PersonIcon sx={{ mr: 2, color: 'primary.main' }} />
+                      <Box>
+                        <Typography variant="subtitle2">
+                          Project Creator
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {session?.user?.name || session?.user?.email || "You (logged in user)"}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+
                   <Grid item xs={12}>
                     <FormControl fullWidth>
-                      <InputLabel>Number of Team Members</InputLabel>
+                      <InputLabel>Additional Team Members</InputLabel>
                       <Select
                         value={numMembers}
                         onChange={(e) => setNumMembers(Number(e.target.value))}
-                        label="Number of Team Members"
+                        label="Additional Team Members"
                         startAdornment={<GroupIcon sx={{ mr: 1, ml: -0.5, color: 'text.secondary' }} />}
                       >
-                        {[1, 2, 3, 4, 5, 6].map((num) => (
+                        {[0, 1, 2, 3, 4, 5].map((num) => (
                           <MenuItem key={num} value={num}>
                             {num} {num === 1 ? 'Member' : 'Members'}
                           </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, ml: 1 }}>
+                    You are automatically listed as the project creator. Only add other team members here. If working solo, enter "N/A" for Team Member 1.
+                      {numMembers === 0 && " If solo, team member will be listed as N/A."}
+                    </Typography>
                   </Grid>
 
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                      Team Members
-                    </Typography>
-                    <Box 
-                      sx={{ 
-                        p: 2, 
-                        borderRadius: 2, 
-                        bgcolor: 'background.paper',
-                        border: (theme) => `1px solid ${theme.palette.divider}`
-                      }}
-                    >
-                      <Grid container spacing={2}>
-                        {teamMembers.map((member, index) => (
-                          <Grid item xs={12} sm={numMembers > 2 ? 6 : 12} key={index}>
-                            <TextField
-                              label={`Team Member ${index + 1}`}
-                              variant="outlined"
-                              fullWidth
-                              value={member}
-                              onChange={(e) => handleTeamMemberChange(index, e.target.value)}
-                              required
-                              placeholder="Enter full name"
-                              size="small"
-                            />
-                          </Grid>
-                        ))}
-                      </Grid>
-                    </Box>
-                  </Grid>
+                  {numMembers > 0 && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Additional Team Members
+                      </Typography>
+                      <Box 
+                        sx={{ 
+                          p: 2, 
+                          borderRadius: 2, 
+                          bgcolor: 'background.paper',
+                          border: (theme) => `1px solid ${theme.palette.divider}`
+                        }}
+                      >
+                        <Grid container spacing={2}>
+                          {teamMembers.map((member, index) => (
+                            <Grid item xs={12} sm={numMembers > 2 ? 6 : 12} key={index}>
+                              <TextField
+                                label={`Team Member ${index + 1}`}
+                                variant="outlined"
+                                fullWidth
+                                value={member}
+                                onChange={(e) => handleTeamMemberChange(index, e.target.value)}
+                                required
+                                placeholder="Enter full name"
+                                size="small"
+                              />
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </Box>
+                    </Grid>
+                  )}
 
                   <Grid item xs={12}>
                     <TextField
@@ -351,7 +382,7 @@ export default function CreateProject() {
                       InputProps={{
                         startAdornment: <ExtensionIcon sx={{ mr: 1, color: 'text.secondary', alignSelf: 'flex-start', mt: 1 }} />,
                       }}
-                      placeholder="List all the hardware components you borrowed for this project"
+                      placeholder="List all the hardware components you borrowed for this project e.g. Arduino, Raspberry Pi, etc."
                     />
                   </Grid>
 

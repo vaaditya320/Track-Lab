@@ -79,31 +79,289 @@ async function generateAndUploadPDF(project, leaderName) {
     const page = pdfDoc.addPage([595, 842]); // A4 size
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-    let textY = height - 50;
-    page.drawText("Project Report", { x: 50, y: textY, size: 20, font, color: rgb(0, 0, 0) });
-    textY -= 30;
-
-    const details = [
-      `Title: ${project.title}`,
-      `Leader: ${leaderName}`,
-      `Team Members: ${JSON.parse(project.teamMembers).join(", ")}`,
-      `Status: ${project.status}`,
-    ];
-
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // Theme color - using proper rgb function from PDF-lib
+    const themeColor = rgb(54/255, 78/255, 210/255);
+    
+    // Header with theme color background
+    page.drawRectangle({
+      x: 0,
+      y: height - 100,
+      width: width,
+      height: 100,
+      color: themeColor
+    });
+    
+    // Title text in white on the theme background
+    page.drawText("PROJECT REPORT", {
+      x: 50,
+      y: height - 60,
+      size: 28,
+      font: boldFont,
+      color: rgb(1, 1, 1) // White
+    });
+    
+    let textY = height - 120;
+    
+    // Project Title
+    page.drawText("Project Title:", {
+      x: 50,
+      y: textY,
+      size: 14,
+      font: boldFont,
+      color: themeColor
+    });
+    
+    textY -= 25;
+    page.drawText(project.title, {
+      x: 70,
+      y: textY,
+      size: 16,
+      font: font,
+      color: rgb(0, 0, 0)
+    });
+    
+    // Leader Name
+    textY -= 35;
+    page.drawText("Project Leader:", {
+      x: 50,
+      y: textY,
+      size: 14,
+      font: boldFont,
+      color: themeColor
+    });
+    
+    textY -= 25;
+    page.drawText(project.leader.name, {
+      x: 70,
+      y: textY,
+      size: 14,
+      font: font,
+      color: rgb(0, 0, 0)
+    });
+    
+    // Team Members in separate boxes
+    textY -= 35;
+    page.drawText("Team Members:", {
+      x: 50,
+      y: textY,
+      size: 14,
+      font: boldFont,
+      color: themeColor
+    });
+    
+    textY -= 25;
+    // Parse team members
+    const teamMembers = JSON.parse(project.teamMembers);
+    const boxHeight = 30;
+    const boxWidth = 150;
+    const boxesPerRow = 3;
+    const margin = 20;
+    
+    for (let i = 0; i < teamMembers.length; i++) {
+      const row = Math.floor(i / boxesPerRow);
+      const col = i % boxesPerRow;
+      
+      const boxX = 50 + col * (boxWidth + margin);
+      const boxY = textY - row * (boxHeight + 10);
+      
+      // Draw box with theme color outline
+      page.drawRectangle({
+        x: boxX,
+        y: boxY - boxHeight,
+        width: boxWidth,
+        height: boxHeight,
+        borderColor: themeColor,
+        borderWidth: 1,
+        color: rgb(0.95, 0.95, 1) // Very light blue background
+      });
+      
+      // Draw member name in the box
+      page.drawText(teamMembers[i], {
+        x: boxX + 10,
+        y: boxY - boxHeight/2 - 6,
+        size: 12,
+        font: font,
+        color: rgb(0, 0, 0)
+      });
+    }
+    
+    // Calculate new Y position after team member boxes
+    const rowsNeeded = Math.ceil(teamMembers.length / boxesPerRow);
+    textY -= (rowsNeeded * (boxHeight + 10) + 20);
+    
+    // Project Status
+    page.drawText("Project Status:", {
+      x: 50,
+      y: textY,
+      size: 14,
+      font: boldFont,
+      color: themeColor
+    });
+    
+    textY -= 25;
+    
+    // Status box with color based on status
+    let statusColor = rgb(0.5, 0.5, 0.5); // Default gray
     if (project.status === "SUBMITTED") {
-      details.push(`Summary: ${project.summary}`, `Components: ${project.components}`);
-    } else {
-      details.push("Status: Partial (More details required)");
+      statusColor = rgb(0, 0.7, 0); // Green for submitted
+    } else if (project.status === "PARTIAL") {
+      statusColor = rgb(1, 0.7, 0); // Orange for partial
     }
-
-    const lineHeight = 16;
-    for (const line of details) {
-      page.drawText(line, { x: 50, y: textY, size: 12, font });
-      textY -= lineHeight;
+    
+    // Draw status box
+    page.drawRectangle({
+      x: 70,
+      y: textY - 25,
+      width: 120,
+      height: 30,
+      color: statusColor,
+      borderWidth: 0
+    });
+    
+    // Draw status text
+    page.drawText(project.status, {
+      x: 80,
+      y: textY - 10,
+      size: 14,
+      font: boldFont,
+      color: rgb(1, 1, 1) // White text
+    });
+    
+    textY -= 50;
+    
+    // Components
+    page.drawText("Components:", {
+      x: 50,
+      y: textY,
+      size: 14,
+      font: boldFont,
+      color: themeColor
+    });
+    
+    textY -= 25;
+    
+    // Draw components in a box
+    page.drawRectangle({
+      x: 50,
+      y: textY - 60,
+      width: width - 100,
+      height: 60,
+      borderColor: themeColor,
+      borderWidth: 1,
+      color: rgb(0.95, 0.95, 1) // Very light blue background
+    });
+    
+    // Draw components text with word wrapping
+    const componentText = project.components || "No components specified";
+    const words = componentText.split(' ');
+    let line = '';
+    let componentY = textY - 20;
+    const maxLineWidth = width - 120;
+    
+    for (const word of words) {
+      const testLine = line + (line ? ' ' : '') + word;
+      const testWidth = font.widthOfTextAtSize(testLine, 12);
+      
+      if (testWidth > maxLineWidth) {
+        page.drawText(line, {
+          x: 60,
+          y: componentY,
+          size: 12,
+          font: font,
+          color: rgb(0, 0, 0)
+        });
+        line = word;
+        componentY -= 15;
+      } else {
+        line = testLine;
+      }
     }
-
-    // Embed Image if available
+    
+    if (line) {
+      page.drawText(line, {
+        x: 60,
+        y: componentY,
+        size: 12,
+        font: font,
+        color: rgb(0, 0, 0)
+      });
+    }
+    
+    textY -= 80;
+    
+    // Summary (only if status is SUBMITTED)
+    if (project.status === "SUBMITTED") {
+      page.drawText("Project Summary:", {
+        x: 50,
+        y: textY,
+        size: 14,
+        font: boldFont,
+        color: themeColor
+      });
+      
+      textY -= 25;
+      
+      // Draw summary in a box
+      page.drawRectangle({
+        x: 50,
+        y: textY - 100,
+        width: width - 100,
+        height: 100,
+        borderColor: themeColor,
+        borderWidth: 1,
+        color: rgb(0.95, 0.95, 1) // Very light blue background
+      });
+      
+      // Draw summary text with word wrapping
+      const summaryText = project.summary || "No summary provided";
+      const summaryWords = summaryText.split(' ');
+      let summaryLine = '';
+      let summaryY = textY - 20;
+      
+      for (const word of summaryWords) {
+        const testLine = summaryLine + (summaryLine ? ' ' : '') + word;
+        const testWidth = font.widthOfTextAtSize(testLine, 12);
+        
+        if (testWidth > maxLineWidth) {
+          page.drawText(summaryLine, {
+            x: 60,
+            y: summaryY,
+            size: 12,
+            font: font,
+            color: rgb(0, 0, 0)
+          });
+          summaryLine = word;
+          summaryY -= 15;
+        } else {
+          summaryLine = testLine;
+        }
+      }
+      
+      if (summaryLine) {
+        page.drawText(summaryLine, {
+          x: 60,
+          y: summaryY,
+          size: 12,
+          font: font,
+          color: rgb(0, 0, 0)
+        });
+      }
+      
+      textY -= 120;
+    }
+    
+    // Add a decorative footer with theme color
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: width,
+      height: 30,
+      color: themeColor
+    });
+    
+    // Embed Image if available (for SUBMITTED projects)
     if (project.status === "SUBMITTED" && project.projectPhoto) {
       try {
         const { buffer: imageBuffer, contentType } = await fetchImageFromS3(project.projectPhoto);
@@ -113,33 +371,50 @@ async function generateAndUploadPDF(project, leaderName) {
         } else if (contentType === "image/jpeg" || contentType === "image/jpg") {
           image = await pdfDoc.embedJpg(imageBuffer);
         }
-
+        
         if (image) {
-          const maxImgWidth = width - 100;
-          const maxImgHeight = height / 3;
+          const maxImgWidth = width - 200;
+          const maxImgHeight = 150;
           const imgDims = image.scaleToFit(maxImgWidth, maxImgHeight);
           const imgX = (width - imgDims.width) / 2;
           const imgY = 50;
-          page.drawImage(image, { x: imgX, y: imgY, width: imgDims.width, height: imgDims.height });
+          
+          // Add a border around the image
+          page.drawRectangle({
+            x: imgX - 5,
+            y: imgY - 5,
+            width: imgDims.width + 10,
+            height: imgDims.height + 10,
+            borderColor: themeColor,
+            borderWidth: 2,
+            color: rgb(1, 1, 1) // White background
+          });
+          
+          page.drawImage(image, {
+            x: imgX,
+            y: imgY,
+            width: imgDims.width,
+            height: imgDims.height
+          });
         }
       } catch (error) {
         console.error("Error embedding image:", error);
       }
     }
-
+    
     // Save PDF in memory and upload to S3
     const pdfBytes = await pdfDoc.save();
     const s3Key = `${FOLDER_NAME}${leaderName.replace(/\s+/g, "_")}-${project.status}-project-${project.id}.pdf`;
-
+    
     const uploadParams = {
       Bucket: BUCKET_NAME,
       Key: s3Key,
       Body: Buffer.from(pdfBytes),
       ContentType: "application/pdf",
     };
-
+    
     await s3.send(new PutObjectCommand(uploadParams));
-
+    
     return s3Key;
   } catch (error) {
     console.error("Error generating and uploading PDF:", error);
