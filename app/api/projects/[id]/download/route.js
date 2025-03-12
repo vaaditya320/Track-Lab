@@ -114,7 +114,7 @@ async function generateAndUploadPDF(project, leaderName) {
     });
     
     textY -= 25;
-    page.drawText(project.title, {
+    page.drawText(project.title || "Untitled Project", {
       x: 70,
       y: textY,
       size: 16,
@@ -133,7 +133,7 @@ async function generateAndUploadPDF(project, leaderName) {
     });
     
     textY -= 25;
-    page.drawText(project.leader.name, {
+    page.drawText(project.leader?.name || leaderName || "Unknown Leader", {
       x: 70,
       y: textY,
       size: 14,
@@ -152,11 +152,22 @@ async function generateAndUploadPDF(project, leaderName) {
     });
     
     textY -= 25;
-    // Parse team members
-    const teamMembers = JSON.parse(project.teamMembers);
+    
+    // Parse team members with error handling
+    let teamMembers = [];
+    try {
+      if (project.teamMembers) {
+        teamMembers = JSON.parse(project.teamMembers);
+      }
+    } catch (error) {
+      console.error("Error parsing team members:", error);
+      teamMembers = project.teamMembers ? [project.teamMembers] : ["No team members specified"];
+    }
+    
+    // Configuration for team member boxes
     const boxHeight = 30;
     const boxWidth = 150;
-    const boxesPerRow = 3;
+    const boxesPerRow = 2; // Reduced from 3 to 2 for longer names
     const margin = 20;
     
     for (let i = 0; i < teamMembers.length; i++) {
@@ -177,13 +188,55 @@ async function generateAndUploadPDF(project, leaderName) {
         color: rgb(0.95, 0.95, 1) // Very light blue background
       });
       
-      // Draw member name in the box
-      page.drawText(teamMembers[i], {
+      // Draw member name in the box with text truncation if needed
+      const memberName = teamMembers[i] || "";
+      let displayName = memberName;
+      const maxWidth = boxWidth - 20;
+      
+      // Check if name needs truncation
+      if (font.widthOfTextAtSize(memberName, 12) > maxWidth) {
+        // Try to fit first name and ID number
+        const parts = memberName.split(' ');
+        if (parts.length > 1) {
+          // Get first name and ID if available
+          let truncated = parts[0];
+          const lastPart = parts[parts.length - 1];
+          if (lastPart.includes("PIET")) {
+            truncated += " " + lastPart;
+          }
+          
+          // Check if truncated version still fits
+          if (font.widthOfTextAtSize(truncated, 12) > maxWidth) {
+            // Just truncate with ellipsis if still too long
+            for (let j = 1; j <= memberName.length; j++) {
+              const testText = memberName.substring(0, j) + "...";
+              if (font.widthOfTextAtSize(testText, 12) > maxWidth) {
+                displayName = memberName.substring(0, j - 1) + "...";
+                break;
+              }
+            }
+          } else {
+            displayName = truncated;
+          }
+        } else {
+          // Single word name that's too long, just truncate
+          for (let j = 1; j <= memberName.length; j++) {
+            const testText = memberName.substring(0, j) + "...";
+            if (font.widthOfTextAtSize(testText, 12) > maxWidth) {
+              displayName = memberName.substring(0, j - 1) + "...";
+              break;
+            }
+          }
+        }
+      }
+      
+      page.drawText(displayName, {
         x: boxX + 10,
         y: boxY - boxHeight/2 - 6,
         size: 12,
         font: font,
-        color: rgb(0, 0, 0)
+        color: rgb(0, 0, 0),
+        maxWidth: boxWidth - 20
       });
     }
     
@@ -204,9 +257,11 @@ async function generateAndUploadPDF(project, leaderName) {
     
     // Status box with color based on status
     let statusColor = rgb(0.5, 0.5, 0.5); // Default gray
-    if (project.status === "SUBMITTED") {
+    const status = project.status || "UNKNOWN";
+    
+    if (status === "SUBMITTED") {
       statusColor = rgb(0, 0.7, 0); // Green for submitted
-    } else if (project.status === "PARTIAL") {
+    } else if (status === "PARTIAL") {
       statusColor = rgb(1, 0.7, 0); // Orange for partial
     }
     
@@ -221,7 +276,7 @@ async function generateAndUploadPDF(project, leaderName) {
     });
     
     // Draw status text
-    page.drawText(project.status, {
+    page.drawText(status, {
       x: 80,
       y: textY - 10,
       size: 14,
@@ -245,54 +300,72 @@ async function generateAndUploadPDF(project, leaderName) {
     // Draw components in a box
     page.drawRectangle({
       x: 50,
-      y: textY - 60,
+      y: textY - 100, // Increased height for components
       width: width - 100,
-      height: 60,
+      height: 100,
       borderColor: themeColor,
       borderWidth: 1,
       color: rgb(0.95, 0.95, 1) // Very light blue background
     });
     
-    // Draw components text with word wrapping
+    // Draw components text with word wrapping and proper handling of newlines
     const componentText = project.components || "No components specified";
-    const words = componentText.split(' ');
-    let line = '';
+    // Split by newlines first
+    const lines = componentText.split(/\r?\n/);
     let componentY = textY - 20;
     const maxLineWidth = width - 120;
     
-    for (const word of words) {
-      const testLine = line + (line ? ' ' : '') + word;
-      const testWidth = font.widthOfTextAtSize(testLine, 12);
+    for (const line of lines) {
+      // Now split the line by spaces for word wrapping
+      const words = line.split(' ');
+      let currentLine = '';
       
-      if (testWidth > maxLineWidth) {
-        page.drawText(line, {
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const testWidth = font.widthOfTextAtSize(testLine, 12);
+        
+        if (testWidth > maxLineWidth) {
+          page.drawText(currentLine, {
+            x: 60,
+            y: componentY,
+            size: 12,
+            font: font,
+            color: rgb(0, 0, 0)
+          });
+          currentLine = word;
+          componentY -= 15;
+          
+          // Check if we're going beyond the box
+          if (componentY < textY - 95) {
+            currentLine += "...";
+            break;
+          }
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      if (currentLine) {
+        page.drawText(currentLine, {
           x: 60,
           y: componentY,
           size: 12,
           font: font,
           color: rgb(0, 0, 0)
         });
-        line = word;
         componentY -= 15;
-      } else {
-        line = testLine;
+        
+        // Check if we're going beyond the box
+        if (componentY < textY - 95) {
+          break;
+        }
       }
     }
     
-    if (line) {
-      page.drawText(line, {
-        x: 60,
-        y: componentY,
-        size: 12,
-        font: font,
-        color: rgb(0, 0, 0)
-      });
-    }
-    
-    textY -= 80;
+    textY -= 120;
     
     // Summary (only if status is SUBMITTED)
-    if (project.status === "SUBMITTED") {
+    if (status === "SUBMITTED") {
       page.drawText("Project Summary:", {
         x: 50,
         y: textY,
@@ -316,37 +389,55 @@ async function generateAndUploadPDF(project, leaderName) {
       
       // Draw summary text with word wrapping
       const summaryText = project.summary || "No summary provided";
-      const summaryWords = summaryText.split(' ');
-      let summaryLine = '';
+      // Split by newlines first
+      const summaryLines = summaryText.split(/\r?\n/);
       let summaryY = textY - 20;
       
-      for (const word of summaryWords) {
-        const testLine = summaryLine + (summaryLine ? ' ' : '') + word;
-        const testWidth = font.widthOfTextAtSize(testLine, 12);
+      for (const line of summaryLines) {
+        // Now split the line by spaces for word wrapping
+        const words = line.split(' ');
+        let currentLine = '';
         
-        if (testWidth > maxLineWidth) {
-          page.drawText(summaryLine, {
+        for (const word of words) {
+          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+          const testWidth = font.widthOfTextAtSize(testLine, 12);
+          
+          if (testWidth > maxLineWidth) {
+            page.drawText(currentLine, {
+              x: 60,
+              y: summaryY,
+              size: 12,
+              font: font,
+              color: rgb(0, 0, 0)
+            });
+            currentLine = word;
+            summaryY -= 15;
+            
+            // Check if we're going beyond the box
+            if (summaryY < textY - 95) {
+              currentLine += "...";
+              break;
+            }
+          } else {
+            currentLine = testLine;
+          }
+        }
+        
+        if (currentLine) {
+          page.drawText(currentLine, {
             x: 60,
             y: summaryY,
             size: 12,
             font: font,
             color: rgb(0, 0, 0)
           });
-          summaryLine = word;
           summaryY -= 15;
-        } else {
-          summaryLine = testLine;
+          
+          // Check if we're going beyond the box
+          if (summaryY < textY - 95) {
+            break;
+          }
         }
-      }
-      
-      if (summaryLine) {
-        page.drawText(summaryLine, {
-          x: 60,
-          y: summaryY,
-          size: 12,
-          font: font,
-          color: rgb(0, 0, 0)
-        });
       }
       
       textY -= 120;
@@ -362,7 +453,7 @@ async function generateAndUploadPDF(project, leaderName) {
     });
     
     // Embed Image if available (for SUBMITTED projects)
-    if (project.status === "SUBMITTED" && project.projectPhoto) {
+    if (status === "SUBMITTED" && project.projectPhoto) {
       try {
         const { buffer: imageBuffer, contentType } = await fetchImageFromS3(project.projectPhoto);
         let image;
@@ -399,6 +490,7 @@ async function generateAndUploadPDF(project, leaderName) {
         }
       } catch (error) {
         console.error("Error embedding image:", error);
+        // Continue execution, don't throw here
       }
     }
     

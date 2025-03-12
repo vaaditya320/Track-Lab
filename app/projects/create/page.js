@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -27,7 +27,12 @@ import {
   Breadcrumbs,
   IconButton,
   Tooltip,
-  useTheme
+  useTheme,
+  List,
+  ListItem,
+  ListItemText,
+  ClickAwayListener,
+  Popper,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -38,6 +43,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import HomeIcon from '@mui/icons-material/Home';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import PersonIcon from '@mui/icons-material/Person';
+import SearchIcon from '@mui/icons-material/Search';
 
 // Loading skeleton for create project page
 const CreateProjectSkeleton = () => {
@@ -99,13 +105,291 @@ const CreateProjectSkeleton = () => {
   );
 };
 
+// TypeaheadInput component for team member selection
+const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
+  const [searchQuery, setSearchQuery] = useState(value);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef(null);
+  const [allStudents, setAllStudents] = useState([]);
+  const theme = useTheme();
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  
+  // Fetch all students when component mounts
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get("/api/students");
+        setAllStudents(response.data);
+      } catch (error) {
+        console.error("Error fetching students:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStudents();
+  }, []);
+  
+  // Update suggestions when search query changes
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSuggestions([]);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = allStudents.filter(student => 
+      student.name.toLowerCase().includes(query)
+    ).slice(0, 10); // Limit to 10 suggestions
+    
+    setSuggestions(filtered);
+    setOpen(filtered.length > 0);
+    setSelectedIndex(-1); // Reset selection when suggestions change
+  }, [searchQuery, allStudents]);
+  
+  // Update searchQuery when value prop changes
+  useEffect(() => {
+    setSearchQuery(value);
+  }, [value]);
+  
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!open) return;
+      
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex(prevIndex => 
+            prevIndex < suggestions.length - 1 ? prevIndex + 1 : prevIndex
+          );
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex(prevIndex => 
+            prevIndex > 0 ? prevIndex - 1 : 0
+          );
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+            handleSuggestionClick(suggestions[selectedIndex]);
+          }
+          break;
+        case 'Escape':
+          setOpen(false);
+          break;
+        default:
+          break;
+      }
+    };
+
+    // Add event listener to the document
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, selectedIndex, suggestions]);
+  
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setOpen(true);
+  };
+  
+  const handleSuggestionClick = (suggestion) => {
+    setSearchQuery(suggestion.name);
+    onChange(suggestion.name);
+    setOpen(false);
+  };
+  
+  const handleClickAway = () => {
+    setOpen(false);
+  };
+
+  // Helper function to highlight matching text
+  const highlightMatch = (text, query) => {
+    if (!query.trim()) return text;
+    
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, i) => 
+      regex.test(part) ? 
+        <Box component="span" key={i} sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>{part}</Box> : 
+        part
+    );
+  };
+  
+  // Random avatar colors for visual distinction
+  const getAvatarColor = (name) => {
+    const colors = [
+      '#1E88E5', '#43A047', '#E53935', '#8E24AA', '#FB8C00', 
+      '#00ACC1', '#3949AB', '#D81B60', '#6D4C41', '#546E7A'
+    ];
+    const charCode = name.charCodeAt(0) || 0;
+    return colors[charCode % colors.length];
+  };
+  
+  // Get initials for avatar
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+  
+  return (
+    <ClickAwayListener onClickAway={handleClickAway}>
+      <Box sx={{ position: 'relative', width: '100%' }}>
+        <TextField
+          ref={inputRef}
+          label={label}
+          variant="outlined"
+          fullWidth
+          value={searchQuery}
+          onChange={handleInputChange}
+          required={required}
+          placeholder={placeholder}
+          size="small"
+          InputProps={{
+            startAdornment: loading ? (
+              <CircularProgress size={20} sx={{ mr: 1 }} />
+            ) : (
+              <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+            ),
+          }}
+          onFocus={() => searchQuery.trim() !== '' && suggestions.length > 0 && setOpen(true)}
+        />
+        
+        {open && suggestions.length > 0 && (
+          <Paper
+            sx={{
+              position: 'absolute',
+              width: '100%',
+              mt: 0.5,
+              zIndex: 1000,
+              maxHeight: 250,
+              overflow: 'auto',
+              borderRadius: 1.5,
+              boxShadow: '0 8px 16px rgba(0,0,0,0.12)',
+              transition: 'all 0.2s ease-in-out',
+              animation: 'fadeIn 0.2s ease-in-out',
+              '@keyframes fadeIn': {
+                '0%': {
+                  opacity: 0,
+                  transform: 'translateY(-10px)'
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'translateY(0)'
+                }
+              }
+            }}
+          >
+            <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+              <Typography variant="caption" color="text.secondary">
+                {suggestions.length} results found
+              </Typography>
+            </Box>
+            
+            <List disablePadding>
+              {suggestions.map((suggestion, index) => (
+                <ListItem
+                  key={index}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  sx={{
+                    transition: 'all 0.2s',
+                    p: 1.5,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                      transform: 'translateX(4px)',
+                    },
+                    backgroundColor: selectedIndex === index ? 
+                      theme.palette.action.selected : 'transparent',
+                    '&:not(:last-child)': {
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      borderBottomColor: 'rgba(0, 0, 0, 0.04)'
+                    },
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2
+                  }}
+                  component={motion.li}
+                  initial={{ opacity: 0, x: -5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: index * 0.03 }}
+                >
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      backgroundColor: getAvatarColor(suggestion.name),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '0.875rem',
+                      flexShrink: 0
+                    }}
+                  >
+                    {getInitials(suggestion.name)}
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {highlightMatch(suggestion.name, searchQuery)}
+                    </Typography>
+                    {suggestion.role && (
+                      <Typography variant="caption" color="text.secondary">
+                        {suggestion.role}
+                      </Typography>
+                    )}
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+            
+            {suggestions.length > 0 && (
+              <Box 
+                sx={{ 
+                  p: 1, 
+                  borderTop: `1px solid ${theme.palette.divider}`,
+                  bgcolor: 'rgba(0, 0, 0, 0.02)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.75rem',
+                  color: 'text.secondary'
+                }}
+              >
+                <Typography variant="caption">Press Enter to select</Typography>
+                <Typography variant="caption">↑↓ to navigate</Typography>
+              </Box>
+            )}
+          </Paper>
+        )}
+      </Box>
+    </ClickAwayListener>
+  );
+};
+
 export default function CreateProject() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const theme = useTheme();
 
   const [title, setTitle] = useState("");
-  const [numMembers, setNumMembers] = useState(1); // Changed to start with 1 additional member
+  const [numMembers, setNumMembers] = useState(1); // Default to 1 team member
   const [teamMembers, setTeamMembers] = useState([]);
   const [borrowedComponents, setBorrowedComponents] = useState("");
   const [error, setError] = useState("");
@@ -126,7 +410,7 @@ export default function CreateProject() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !borrowedComponents || (numMembers > 0 && teamMembers.some((member) => !member))) {
+    if (!title || !borrowedComponents || teamMembers.some((member) => !member)) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -138,7 +422,7 @@ export default function CreateProject() {
       // Include creator (current user) automatically
       const projectData = {
         title,
-        teamMembers: numMembers === 0 ? ["N/A"] : teamMembers, // Use N/A for solo projects
+        teamMembers: teamMembers, // Always include team members now
         components: borrowedComponents,
       };
 
@@ -323,7 +607,7 @@ export default function CreateProject() {
                         label="Additional Team Members"
                         startAdornment={<GroupIcon sx={{ mr: 1, ml: -0.5, color: 'text.secondary' }} />}
                       >
-                        {[0, 1, 2, 3, 4, 5].map((num) => (
+                        {[1, 2, 3, 4, 5].map((num) => (
                           <MenuItem key={num} value={num}>
                             {num} {num === 1 ? 'Member' : 'Members'}
                           </MenuItem>
@@ -331,43 +615,37 @@ export default function CreateProject() {
                       </Select>
                     </FormControl>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, ml: 1 }}>
-                    You are automatically listed as the project creator. Only add other team members here. If working solo, enter "N/A" for Team Member 1.
-                      {numMembers === 0 && " If solo, team member will be listed as N/A."}
+                      You are automatically listed as the project creator. Add additional team members here.
                     </Typography>
                   </Grid>
 
-                  {numMembers > 0 && (
-                    <Grid item xs={12}>
-                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        Additional Team Members
-                      </Typography>
-                      <Box 
-                        sx={{ 
-                          p: 2, 
-                          borderRadius: 2, 
-                          bgcolor: 'background.paper',
-                          border: (theme) => `1px solid ${theme.palette.divider}`
-                        }}
-                      >
-                        <Grid container spacing={2}>
-                          {teamMembers.map((member, index) => (
-                            <Grid item xs={12} sm={numMembers > 2 ? 6 : 12} key={index}>
-                              <TextField
-                                label={`Team Member ${index + 1}`}
-                                variant="outlined"
-                                fullWidth
-                                value={member}
-                                onChange={(e) => handleTeamMemberChange(index, e.target.value)}
-                                required
-                                placeholder="Enter full name"
-                                size="small"
-                              />
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </Box>
-                    </Grid>
-                  )}
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Additional Team Members
+                    </Typography>
+                    <Box 
+                      sx={{ 
+                        p: 2, 
+                        borderRadius: 2, 
+                        bgcolor: 'background.paper',
+                        border: (theme) => `1px solid ${theme.palette.divider}`
+                      }}
+                    >
+                      <Grid container spacing={2}>
+                        {teamMembers.map((member, index) => (
+                          <Grid item xs={12} sm={numMembers > 2 ? 6 : 12} key={index}>
+                            <TypeaheadInput
+                              label={`Team Member ${index + 1}`}
+                              value={member}
+                              onChange={(value) => handleTeamMemberChange(index, value)}
+                              required
+                              placeholder="Start typing a name"
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  </Grid>
 
                   <Grid item xs={12}>
                     <TextField

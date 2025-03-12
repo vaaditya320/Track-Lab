@@ -27,7 +27,10 @@ model Project {
   status       Status   @default(PARTIAL) // Default status is PARTIAL
   leader       User     @relation(fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
 }
-
+model Student {
+  id     String @id @default(uuid()) 
+  name   String @unique // Student names should be unique for typeahead search
+}
 enum Status {
   PARTIAL
   SUBMITTED
