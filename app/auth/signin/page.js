@@ -221,6 +221,7 @@ export default function SignIn() {
                             layout="fill"
                             objectFit="contain"
                             priority
+                            sizes="70px"
                           />
                         </Box>
                         
