@@ -21,6 +21,7 @@ export const authOptions = {
 
   pages: {
     signIn: "/auth/signin", // Custom sign-in page
+    error: "/auth/error"
   },
 
   callbacks: {
