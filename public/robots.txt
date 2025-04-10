@@ -3,4 +3,4 @@ Disallow: /admin/
 Disallow: /api/
 Allow: /
 
-Sitemap: https://tracklab.aadityavinayak,in.net/sitemap.xml
+Sitemap: https://tracklab.vaadi.site/sitemap.xml
