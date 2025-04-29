@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
+import { logAdminAction } from "@/lib/logger";
 
 // Admin check middleware
 async function isAdmin(session) {
@@ -58,6 +59,13 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
+    
+    // Get leader details for logging
+    const leader = await prisma.user.findUnique({
+      where: { id: body.leaderId },
+      select: { name: true, email: true },
+    });
+    
     const newProject = await prisma.project.create({
       data: {
         title: body.title,
@@ -68,6 +76,11 @@ export async function POST(req) {
         leaderId: body.leaderId,
       },
     });
+
+    // Log the admin action
+    await logAdminAction(
+      `Project "${body.title}" created by admin ${session.user.name} (${session.user.email}) with leader ${leader.name} (${leader.email})`
+    );
 
     return new Response(JSON.stringify(newProject), { status: 201 });
   } catch (error) {
@@ -90,6 +103,12 @@ export async function PUT(req, { params }) {
     const body = await req.json();
     const { id } = params;
 
+    // Get project details before update for logging
+    const projectBeforeUpdate = await prisma.project.findUnique({
+      where: { id },
+      select: { title: true, status: true },
+    });
+
     const updatedProject = await prisma.project.update({
       where: { id },
       data: {
@@ -101,6 +120,11 @@ export async function PUT(req, { params }) {
         status: body.status || "PARTIAL",
       },
     });
+
+    // Log the admin action
+    await logAdminAction(
+      `Project "${projectBeforeUpdate.title}" updated by admin ${session.user.name} (${session.user.email}). Status changed from ${projectBeforeUpdate.status} to ${body.status || "PARTIAL"}`
+    );
 
     return new Response(JSON.stringify(updatedProject), { status: 200 });
   } catch (error) {
@@ -121,9 +145,21 @@ export async function DELETE(req, { params }) {
 
   try {
     const { id } = await params;
+    
+    // Get project details before deletion for logging
+    const projectToDelete = await prisma.project.findUnique({
+      where: { id },
+      select: { title: true, status: true },
+    });
+    
     const deletedProject = await prisma.project.delete({
       where: { id },
     });
+
+    // Log the admin action
+    await logAdminAction(
+      `Project "${projectToDelete.title}" (status: ${projectToDelete.status}) deleted by admin ${session.user.name} (${session.user.email})`
+    );
 
     return new Response(JSON.stringify(deletedProject), { status: 200 });
   } catch (error) {

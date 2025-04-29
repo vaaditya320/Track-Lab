@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { logAdminAction } from "@/lib/logger";
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -21,6 +22,11 @@ export async function GET(req, { params }) {
     if (!user) {
       return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
     }
+
+    // Log the admin action
+    await logAdminAction(
+      `Admin ${session.user.name} (${session.user.email}) viewed user details for ${user.name} (${user.email}) (${user.role})`
+    );
 
     return new Response(JSON.stringify(user), { status: 200 });
   } catch (error) {

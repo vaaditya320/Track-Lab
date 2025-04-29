@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
+import { logAdminAction } from "@/lib/logger";
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -34,10 +35,10 @@ export async function PUT(req) {
       return new Response(JSON.stringify({ error: "Invalid request" }), { status: 400 });
     }
 
-    // Fetch current user role
+    // Fetch current user role and email
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { role: true },
+      select: { role: true, email: true, name: true },
     });
 
     if (!user) {
@@ -52,6 +53,11 @@ export async function PUT(req) {
       where: { id },
       data: { role: newRole },
     });
+
+    // Log the admin action
+    await logAdminAction(
+      `User ${user.name} (${user.email}) ${action.toLowerCase()}d from ${user.role} to ${newRole} by admin ${session.user.name} (${session.user.email})`
+    );
 
     return new Response(JSON.stringify(updatedUser), { status: 200 });
   } catch (error) {
@@ -71,9 +77,24 @@ export async function DELETE(req) {
   try {
     const { id } = await req.json();
 
+    // Fetch user details before deletion for logging
+    const userToDelete = await prisma.user.findUnique({
+      where: { id },
+      select: { email: true, role: true, name: true },
+    });
+
+    if (!userToDelete) {
+      return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+    }
+
     await prisma.user.delete({
       where: { id },
     });
+
+    // Log the admin action
+    await logAdminAction(
+      `User ${userToDelete.name} (${userToDelete.email}) (${userToDelete.role}) deleted by admin ${session.user.name} (${session.user.email})`
+    );
 
     return new Response(JSON.stringify({ message: "User deleted successfully" }), { status: 200 });
   } catch (error) {
