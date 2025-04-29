@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
@@ -16,8 +16,6 @@ const s3 = new S3Client({
 
 const BUCKET_NAME = "cache-buster";
 const FOLDER_NAME = "tracklab-project-reports/";
-
-const prisma = new PrismaClient();
 
 // Check if PDF exists in S3
 async function checkIfPdfExists(s3Key) {
