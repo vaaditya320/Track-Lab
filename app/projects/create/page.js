@@ -212,6 +212,15 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     setOpen(false);
   };
 
+  // Add a function to handle blur event
+  const handleBlur = () => {
+    // When the input loses focus, trim the value and update it
+    const trimmedValue = searchQuery.trim();
+    setSearchQuery(trimmedValue);
+    onChange(trimmedValue);
+    setOpen(false);
+  };
+
   // Helper function to highlight matching text
   const highlightMatch = (text, query) => {
     if (!query.trim()) return text;
@@ -256,6 +265,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
           fullWidth
           value={searchQuery}
           onChange={handleInputChange}
+          onBlur={handleBlur}
           required={required}
           placeholder={placeholder}
           size="small"
@@ -410,8 +420,26 @@ export default function CreateProject() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title || !borrowedComponents || teamMembers.some((member) => !member)) {
-      setError("Please fill in all required fields.");
+    // Trim whitespace from all inputs
+    const trimmedTitle = title.trim();
+    const trimmedComponents = borrowedComponents.trim();
+    const trimmedTeamMembers = teamMembers.map(member => member.trim());
+
+    // Check if any required field is empty
+    if (!trimmedTitle) {
+      setError("Project title is required.");
+      return;
+    }
+
+    if (!trimmedComponents) {
+      setError("Borrowed components information is required.");
+      return;
+    }
+
+    // Check if any team member name is empty
+    const emptyMemberIndex = trimmedTeamMembers.findIndex(member => !member);
+    if (emptyMemberIndex !== -1) {
+      setError(`Team member ${emptyMemberIndex + 1} name is required.`);
       return;
     }
 
@@ -421,9 +449,9 @@ export default function CreateProject() {
     try {
       // Include creator (current user) automatically
       const projectData = {
-        title,
-        teamMembers: teamMembers, // Always include team members now
-        components: borrowedComponents,
+        title: trimmedTitle,
+        teamMembers: trimmedTeamMembers, // Use trimmed team members
+        components: trimmedComponents,
       };
 
       const response = await axios.post("/api/projects/create", projectData);
@@ -444,8 +472,9 @@ export default function CreateProject() {
         }, 3000);
       }
     } catch (error) {
-      setToast({ open: true, message: "Error creating project!", severity: "error" });
-      console.error(error);
+      console.error("Error creating project:", error);
+      const errorMessage = error.response?.data?.error || "Error creating project. Please try again.";
+      setToast({ open: true, message: errorMessage, severity: "error" });
     } finally {
       setLoading(false);
     }
