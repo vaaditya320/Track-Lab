@@ -107,7 +107,6 @@ const CreateProjectSkeleton = () => {
 
 // TypeaheadInput component for team member selection
 const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
-  const [searchQuery, setSearchQuery] = useState(value);
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -115,6 +114,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
   const [allStudents, setAllStudents] = useState([]);
   const theme = useTheme();
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const isClickingSuggestion = useRef(false);
   
   // Fetch all students when component mounts
   useEffect(() => {
@@ -133,14 +133,14 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     fetchStudents();
   }, []);
   
-  // Update suggestions when search query changes
+  // Update suggestions when value changes
   useEffect(() => {
-    if (searchQuery.trim() === '') {
+    if (value.trim() === '') {
       setSuggestions([]);
       return;
     }
     
-    const query = searchQuery.toLowerCase();
+    const query = value.toLowerCase();
     const filtered = allStudents.filter(student => 
       student.name.toLowerCase().includes(query)
     ).slice(0, 10); // Limit to 10 suggestions
@@ -148,12 +148,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     setSuggestions(filtered);
     setOpen(filtered.length > 0);
     setSelectedIndex(-1); // Reset selection when suggestions change
-  }, [searchQuery, allStudents]);
-  
-  // Update searchQuery when value prop changes
-  useEffect(() => {
-    setSearchQuery(value);
-  }, [value]);
+  }, [value, allStudents]);
   
   // Handle keyboard navigation
   useEffect(() => {
@@ -197,15 +192,15 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
   }, [open, selectedIndex, suggestions]);
   
   const handleInputChange = (e) => {
-    const value = e.target.value;
-    setSearchQuery(value);
+    onChange(e.target.value);
     setOpen(true);
   };
   
   const handleSuggestionClick = (suggestion) => {
-    setSearchQuery(suggestion.name);
-    onChange(suggestion.name);
+    const displayValue = `${suggestion.name} ${suggestion.regId}`;
+    onChange(displayValue);
     setOpen(false);
+    inputRef.current?.blur();
   };
   
   const handleClickAway = () => {
@@ -214,11 +209,15 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
 
   // Add a function to handle blur event
   const handleBlur = () => {
-    // When the input loses focus, trim the value and update it
-    const trimmedValue = searchQuery.trim();
-    setSearchQuery(trimmedValue);
-    onChange(trimmedValue);
-    setOpen(false);
+    if (isClickingSuggestion.current) {
+      isClickingSuggestion.current = false;
+      return;
+    }
+    setTimeout(() => {
+      const trimmedValue = value.trim();
+      onChange(trimmedValue);
+      setOpen(false);
+    }, 150);
   };
 
   // Helper function to highlight matching text
@@ -263,7 +262,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
           label={label}
           variant="outlined"
           fullWidth
-          value={searchQuery}
+          value={value}
           onChange={handleInputChange}
           onBlur={handleBlur}
           required={required}
@@ -276,7 +275,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
               <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
             ),
           }}
-          onFocus={() => searchQuery.trim() !== '' && suggestions.length > 0 && setOpen(true)}
+          onFocus={() => value.trim() !== '' && suggestions.length > 0 && setOpen(true)}
         />
         
         {open && suggestions.length > 0 && (
@@ -314,6 +313,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
               {suggestions.map((suggestion, index) => (
                 <ListItem
                   key={index}
+                  onMouseDown={() => { isClickingSuggestion.current = true; }}
                   onClick={() => handleSuggestionClick(suggestion)}
                   sx={{
                     transition: 'all 0.2s',
@@ -357,7 +357,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
                   </Box>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {highlightMatch(suggestion.name, searchQuery)}
+                      {highlightMatch(`${suggestion.name} ${suggestion.regId}`, value)}
                     </Typography>
                     {suggestion.role && (
                       <Typography variant="caption" color="text.secondary">

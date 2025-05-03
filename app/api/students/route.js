@@ -13,7 +13,7 @@ export async function GET(req) {
 
   try {
     const students = await prisma.student.findMany({
-      select: { name: true },
+      select: { name: true, regId: true },
     });
 
     return new Response(JSON.stringify(students), { status: 200 });

@@ -4,7 +4,7 @@ const xlsx = require("xlsx");
 const prisma = new PrismaClient();
 
 // Path to your Excel file
-const FILE_PATH = "./students.xlsx";
+const FILE_PATH = "./tracklab-students.xlsx";
 
 async function uploadStudents() {
   console.log("Starting student upload...");
@@ -16,32 +16,37 @@ async function uploadStudents() {
     console.log("Using sheet:", sheetName);
     const sheet = workbook.Sheets[sheetName];
 
-    // Convert sheet to JSON
+    // Convert sheet to JSON (header row is first row)
     console.log("Converting sheet to JSON...");
     const students = xlsx.utils.sheet_to_json(sheet, { header: 1 });
 
-    // Extract student names from the sheet
-    console.log("Extracting student names...");
-    const studentNames = students.flat().filter(name => typeof name === "string" && name.trim() !== "");
+    // Find header indices
+    const header = students[0];
+    const nameIdx = header.findIndex(h => h.toLowerCase().includes("name"));
+    const regidIdx = header.findIndex(h => h.toLowerCase().includes("regid"));
 
-    console.log(`Total students found: ${studentNames.length}`);
-
-    if (studentNames.length === 0) {
-      console.warn("No valid student names found in the sheet. Exiting.");
+    if (nameIdx === -1 || regidIdx === -1) {
+      console.error("Could not find 'name' or 'regid' columns in the sheet header.");
       return;
     }
 
-    for (const name of studentNames) {
-      console.log(`Processing student: ${name}`);
+    // Process each student row (skip header)
+    let count = 0;
+    for (let i = 1; i < students.length; i++) {
+      const row = students[i];
+      const name = row[nameIdx]?.trim();
+      const regId = row[regidIdx]?.trim();
+      if (!name || !regId) continue;
+      console.log(`Processing student: ${name} (${regId})`);
       await prisma.student.upsert({
-        where: { name },
-        update: {},
-        create: { name },
+        where: { regId },
+        update: { name },
+        create: { name, regId },
       });
-      console.log(`Uploaded student: ${name}`);
+      count++;
     }
 
-    console.log("All students uploaded successfully.");
+    console.log(`All students uploaded successfully. Total: ${count}`);
   } catch (error) {
     console.error("Error uploading students:", error);
   } finally {

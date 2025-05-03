@@ -28,8 +28,8 @@ model Project {
   leader       User     @relation(fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
 }
 model Student {
-  id     String @id @default(uuid()) 
-  name   String @unique // Student names should be unique for typeahead search
+  name   String // Student name
+  regId  String @id @unique // Registration ID as primary key
 }
 enum Status {
   PARTIAL
