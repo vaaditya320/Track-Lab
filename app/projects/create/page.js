@@ -142,7 +142,8 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     
     const query = value.toLowerCase();
     const filtered = allStudents.filter(student => 
-      student.name.toLowerCase().includes(query)
+      student.name.toLowerCase().includes(query) ||
+      student.regId.toLowerCase().includes(query)
     ).slice(0, 10); // Limit to 10 suggestions
     
     setSuggestions(filtered);
@@ -291,6 +292,8 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
               boxShadow: '0 8px 16px rgba(0,0,0,0.12)',
               transition: 'all 0.2s ease-in-out',
               animation: 'fadeIn 0.2s ease-in-out',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y',
               '@keyframes fadeIn': {
                 '0%': {
                   opacity: 0,
@@ -302,6 +305,8 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
                 }
               }
             }}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
           >
             <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
               <Typography variant="caption" color="text.secondary">
