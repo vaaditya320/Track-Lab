@@ -38,6 +38,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon for dark mode
 import Brightness7Icon from '@mui/icons-material/Brightness7'; // Sun icon for light mode
 import { ThemeProvider } from "@mui/material/styles";
@@ -53,6 +54,7 @@ const navLinks = [
 
 // Admin panel link - Will only show to admin users
 const adminLink = { title: "Admin Panel", path: "/admin", icon: <AdminPanelSettingsIcon /> };
+const assignedProjectsLink = { title: "Assigned Projects", path: "/admin/assigned-projects", icon: <AssignmentIcon /> };
 
 export default function Layout({ children }) {
   // Add state for theme mode
@@ -204,7 +206,7 @@ function NavigationHeader({ toggleThemeMode, mode }) {
   // Get links based on user role
   const getLinks = () => {
     if (status === "authenticated" && isAdmin) {
-      return [...navLinks, adminLink];
+      return [...navLinks, adminLink, assignedProjectsLink];
     }
     return navLinks;
   };
@@ -655,6 +657,18 @@ function UserAccount({ status, session }) {
             )}
           </Box>
           <Divider sx={{ my: 1 }} />
+          {/* Profile link for all users */}
+          <MenuItem 
+            component={Link} 
+            href="/profile" 
+            onClick={handleClose}
+            sx={{ py: 1.5 }}
+          >
+            <ListItemIcon>
+              <PersonIcon fontSize="small" color="primary" />
+            </ListItemIcon>
+            <Typography color="primary">Profile</Typography>
+          </MenuItem>
           {/* Admin Panel link in dropdown for admin users */}
           {isAdmin && (
             <MenuItem 

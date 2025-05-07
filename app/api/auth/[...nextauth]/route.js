@@ -61,6 +61,9 @@ export const authOptions = {
         session.user.id = dbUser.id;
         session.user.regId = dbUser.regId;
         session.user.role = dbUser.role;
+        session.user.branch = dbUser.branch || null;
+        session.user.section = dbUser.section || null;
+        session.user.batch = dbUser.batch || null;
       }
 
       return session;

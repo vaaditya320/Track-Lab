@@ -27,7 +27,10 @@ export async function GET(req) {
     const projects = await prisma.project.findMany({
       include: {
         leader: {
-          select: { name: true },
+          select: { 
+            name: true,
+            batch: true 
+          },
         },
       },
     });
@@ -37,6 +40,7 @@ export async function GET(req) {
         projects.map((project) => ({
           ...project,
           leaderName: project.leader.name,
+          leaderBatch: project.leader.batch,
         }))
       ),
       { status: 200 }

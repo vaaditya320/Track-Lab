@@ -371,7 +371,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingProjectId, setLoadingProjectId] = useState(null);
-  const [filter, setFilter] = useState({ leader: "", status: "", search: "" });
+  const [filter, setFilter] = useState({ leader: "", status: "", search: "", batch: "" });
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [error, setError] = useState("");
   const [selectedProjects, setSelectedProjects] = useState([]);
@@ -428,7 +428,8 @@ export default function AdminPage() {
     const filtered = projects.filter(project =>
       (filter.leader ? project.leaderName.toLowerCase().includes(filter.leader.toLowerCase()) : true) &&
       (filter.status ? project.status.toLowerCase() === filter.status.toLowerCase() : true) &&
-      (filter.search ? project.title.toLowerCase().includes(filter.search.toLowerCase()) || project.leaderName.toLowerCase().includes(filter.search.toLowerCase()) : true)
+      (filter.search ? project.title.toLowerCase().includes(filter.search.toLowerCase()) || project.leaderName.toLowerCase().includes(filter.search.toLowerCase()) : true) &&
+      (filter.batch ? project.leaderBatch === filter.batch : true)
     );
     setFilteredProjects(filtered);
   }, [filter, projects]);
@@ -613,32 +614,50 @@ export default function AdminPage() {
             Admin Dashboard
           </Typography>
           
-          {/* Special button for specific user */}
-          {hasSpecialAccess && (
-            <Tooltip title="Special User Access">
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => router.push('/admin/user-roles')}
-                fullWidth={isMobile}
-                sx={{ 
-                  background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
-                  boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
-                  '&:hover': {
-                    background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
-                    boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
-                  }
-                }}
-              >
-                User Management
-              </Button>
-            </Tooltip>
-          )}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* Special button for specific user */}
+            {hasSpecialAccess && (
+              <Tooltip title="Special User Access">
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => router.push('/admin/user-roles')}
+                  fullWidth={isMobile}
+                  sx={{ 
+                    background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
+                    boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
+                    '&:hover': {
+                      background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
+                      boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
+                    }
+                  }}
+                >
+                  User Management
+                </Button>
+              </Tooltip>
+            )}
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => router.push('/admin/assigned-projects')}
+              fullWidth={isMobile}
+              sx={{
+                background: "linear-gradient(45deg, #1976D2 0%, #1565C0 100%)",
+                boxShadow: "0 4px 20px rgba(25, 118, 210, 0.3)",
+                '&:hover': {
+                  background: "linear-gradient(45deg, #1565C0 0%, #0D47A1 100%)",
+                  boxShadow: "0 6px 25px rgba(25, 118, 210, 0.4)",
+                }
+              }}
+            >
+              My Assigned Projects
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ mb: 4 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 fullWidth
                 label="Search by Leader or Title"
@@ -648,7 +667,7 @@ export default function AdminPage() {
                 onChange={handleFilterChange}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
                 <Select value={filter.status} label="Status" name="status" onChange={handleFilterChange}>
@@ -658,7 +677,7 @@ export default function AdminPage() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 fullWidth
                 label="Filter by Leader"
@@ -667,6 +686,38 @@ export default function AdminPage() {
                 name="leader"
                 onChange={handleFilterChange}
               />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Batch</InputLabel>
+                <Select value={filter.batch} label="Batch" name="batch" onChange={handleFilterChange}>
+                  <MenuItem value="">All Batches</MenuItem>
+                  <MenuItem value="A1">A1</MenuItem>
+                  <MenuItem value="A2">A2</MenuItem>
+                  <MenuItem value="A3">A3</MenuItem>
+                  <MenuItem value="B1">B1</MenuItem>
+                  <MenuItem value="B2">B2</MenuItem>
+                  <MenuItem value="B3">B3</MenuItem>
+                  <MenuItem value="C1">C1</MenuItem>
+                  <MenuItem value="C2">C2</MenuItem>
+                  <MenuItem value="C3">C3</MenuItem>
+                  <MenuItem value="D1">D1</MenuItem>
+                  <MenuItem value="D2">D2</MenuItem>
+                  <MenuItem value="D3">D3</MenuItem>
+                  <MenuItem value="E1">E1</MenuItem>
+                  <MenuItem value="E2">E2</MenuItem>
+                  <MenuItem value="E3">E3</MenuItem>
+                  <MenuItem value="F1">F1</MenuItem>
+                  <MenuItem value="F2">F2</MenuItem>
+                  <MenuItem value="F3">F3</MenuItem>
+                  <MenuItem value="G1">G1</MenuItem>
+                  <MenuItem value="G2">G2</MenuItem>
+                  <MenuItem value="G3">G3</MenuItem>
+                  <MenuItem value="H1">H1</MenuItem>
+                  <MenuItem value="H2">H2</MenuItem>
+                  <MenuItem value="H3">H3</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
         </Box>

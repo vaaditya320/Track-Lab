@@ -8,29 +8,37 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  regId     String   @unique
-  email     String   @unique
-  role      Role     @default(STUDENT) // Role field with default value
-  projects  Project[] // The relation to projects remains unchanged
+  id              String    @id @default(uuid())
+  name            String
+  regId           String    @unique
+  email           String    @unique
+  role            Role      @default(STUDENT) // Role field with default value
+  branch          Branch?   // New enum field for branch
+  section         Section?  // New enum field for section
+  batch           Batch?    // New enum field for batch
+  projects        Project[] @relation("ProjectLeader") // The relation to projects as leader
+  assignedProjects Project[] @relation("ProjectAdmin") // The relation to projects as admin
 }
 
 model Project {
-  id           String   @id @default(uuid())
-  leaderId     String   // Foreign key to User
-  title        String   // Project title
-  teamMembers  String   // JSON stringified array for team members
-  components   String   // Text for borrowed components
-  summary      String?  // Nullable summary
-  projectPhoto String?  // Nullable project photo (image path)
-  status       Status   @default(PARTIAL) // Default status is PARTIAL
-  leader       User     @relation(fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
+  id             String   @id @default(uuid())
+  leaderId       String   // Foreign key to User
+  assignedAdminId String? // Foreign key to User (nullable)
+  title          String   // Project title
+  teamMembers    String   // JSON stringified array for team members
+  components     String   // Text for borrowed components
+  summary        String?  // Nullable summary
+  projectPhoto   String?  // Nullable project photo (image path)
+  status         Status   @default(PARTIAL) // Default status is PARTIAL
+  leader         User     @relation("ProjectLeader", fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
+  assignedAdmin  User?    @relation("ProjectAdmin", fields: [assignedAdminId], references: [id]) // Relation to User for admin
 }
+
 model Student {
   name   String // Student name
   regId  String @id @unique // Registration ID as primary key
 }
+
 enum Status {
   PARTIAL
   SUBMITTED
@@ -39,4 +47,51 @@ enum Status {
 enum Role {
   STUDENT
   ADMIN
+}
+
+enum Branch {
+  CS
+  CSR // CS(R)
+  CSAI // CS(AI)
+  CSDS // CS(DS)
+  AIDS
+  CSIOT // CS(IOT)
+}
+
+enum Section {
+  A
+  B
+  C
+  D
+  E
+  F
+  G
+  H
+}
+
+enum Batch {
+  A1
+  A2
+  A3
+  B1
+  B2
+  B3
+  C1
+  C2
+  C3
+  D1
+  D2
+  D3
+  E1
+  E2
+  E3
+  F1
+  F2
+  F3
+  G1
+  G2
+  G3
+  H1
+  H2
+  H3
 }
