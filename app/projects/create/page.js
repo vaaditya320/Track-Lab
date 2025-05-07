@@ -404,17 +404,31 @@ export default function CreateProject() {
   const theme = useTheme();
 
   const [title, setTitle] = useState("");
-  const [numMembers, setNumMembers] = useState(1); // Default to 1 team member
+  const [numMembers, setNumMembers] = useState(1);
   const [teamMembers, setTeamMembers] = useState([]);
   const [borrowedComponents, setBorrowedComponents] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [progress, setProgress] = useState(100);
+  const [admins, setAdmins] = useState([]);
+  const [selectedAdminId, setSelectedAdminId] = useState(null);
 
   useEffect(() => {
     setTeamMembers(Array(numMembers).fill(""));
   }, [numMembers]);
+
+  useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        const response = await axios.get("/api/admins");
+        setAdmins(response.data);
+      } catch (error) {
+        console.error("Error fetching admins:", error);
+      }
+    };
+    fetchAdmins();
+  }, []);
 
   const handleTeamMemberChange = (index, value) => {
     const updatedMembers = [...teamMembers];
@@ -432,19 +446,19 @@ export default function CreateProject() {
 
     // Check if any required field is empty
     if (!trimmedTitle) {
-      setError("Project title is required.");
+      setToast({ open: true, message: "Project title is required.", severity: "error" });
       return;
     }
 
     if (!trimmedComponents) {
-      setError("Borrowed components information is required.");
+      setToast({ open: true, message: "Borrowed components information is required.", severity: "error" });
       return;
     }
 
     // Check if any team member name is empty
     const emptyMemberIndex = trimmedTeamMembers.findIndex(member => !member);
     if (emptyMemberIndex !== -1) {
-      setError(`Team member ${emptyMemberIndex + 1} name is required.`);
+      setToast({ open: true, message: `Team member ${emptyMemberIndex + 1} name is required.`, severity: "error" });
       return;
     }
 
@@ -452,20 +466,24 @@ export default function CreateProject() {
     setError("");
 
     try {
-      // Include creator (current user) automatically
       const projectData = {
         title: trimmedTitle,
-        teamMembers: trimmedTeamMembers, // Use trimmed team members
+        teamMembers: trimmedTeamMembers.join(", "),
         components: trimmedComponents,
+        assignedAdminId: selectedAdminId || null,
       };
 
-      const response = await axios.post("/api/projects/create", projectData);
+      const response = await axios.post("/api/projects", projectData);
 
       if (response.status === 201) {
-        setToast({ open: true, message: "Project created successfully!", severity: "success" });
+        setToast({ 
+          open: true, 
+          message: "Project created successfully! Redirecting to dashboard...", 
+          severity: "success" 
+        });
 
         // Start progress countdown
-        let timeLeft = 3000; // 3 seconds
+        let timeLeft = 3000;
         const interval = setInterval(() => {
           setProgress((prev) => Math.max(prev - (100 / (timeLeft / 100)), 0));
         }, 100);
@@ -479,7 +497,12 @@ export default function CreateProject() {
     } catch (error) {
       console.error("Error creating project:", error);
       const errorMessage = error.response?.data?.error || "Error creating project. Please try again.";
-      setToast({ open: true, message: errorMessage, severity: "error" });
+      setToast({ 
+        open: true, 
+        message: errorMessage, 
+        severity: "error" 
+      });
+      setProgress(100); // Reset progress on error
     } finally {
       setLoading(false);
     }
@@ -606,6 +629,20 @@ export default function CreateProject() {
                         startAdornment: <TitleIcon sx={{ mr: 1, color: 'text.secondary' }} />,
                       }}
                       placeholder="Enter a descriptive title for your project"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          '& fieldset': {
+                            borderColor: 'rgba(0, 0, 0, 0.23)'
+                          },
+                          '&:hover fieldset': {
+                            borderColor: 'rgba(0, 0, 0, 0.23)'
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: 'primary.main'
+                          }
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -629,6 +666,97 @@ export default function CreateProject() {
                           {session?.user?.name || session?.user?.email || "You (logged in user)"}
                         </Typography>
                       </Box>
+                    </Box>
+                  </Grid>
+
+                  {/* Admin Selection */}
+                  <Grid item xs={12}>
+                    <Box sx={{ 
+                      p: 2, 
+                      borderRadius: 2, 
+                      bgcolor: 'background.paper',
+                      border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        Assign Project Admin
+                      </Typography>
+                      <FormControl fullWidth required>
+                        <InputLabel id="admin-select-label">Select Project Admin</InputLabel>
+                        <Select
+                          labelId="admin-select-label"
+                          id="admin-select"
+                          value={selectedAdminId || ""}
+                          label="Select Project Admin"
+                          onChange={(e) => setSelectedAdminId(e.target.value)}
+                          startAdornment={<PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />}
+                          sx={{
+                            '& .MuiSelect-select': {
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'rgba(0, 0, 0, 0.23)'
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'rgba(0, 0, 0, 0.23)'
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'primary.main'
+                            }
+                          }}
+                          displayEmpty
+                          renderValue={(selected) => {
+                            if (!selected) {
+                              return <Typography color="text.secondary">Select from dropdown</Typography>;
+                            }
+                            const admin = admins.find(a => a.id === selected);
+                            return admin ? admin.name : '';
+                          }}
+                        >
+                          {admins.map((admin) => (
+                            <MenuItem 
+                              key={admin.id} 
+                              value={admin.id}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                py: 1
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: '50%',
+                                  backgroundColor: theme.palette.primary.main,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.875rem',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {admin.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                              </Box>
+                              <Box>
+                                <Typography variant="body2">
+                                  {admin.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {admin.regId}
+                                </Typography>
+                              </Box>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, ml: 1 }}>
+                        Select an admin who will oversee this project
+                      </Typography>
                     </Box>
                   </Grid>
 
@@ -715,7 +843,8 @@ export default function CreateProject() {
                         py: 1.5, 
                         fontWeight: 600,
                         borderRadius: 2,
-                        boxShadow: 2
+                        boxShadow: 2,
+                        transition: 'all 0.3s ease-in-out'
                       }}
                     >
                       {loading ? "Creating Project..." : "Create Project"}
@@ -733,12 +862,28 @@ export default function CreateProject() {
           autoHideDuration={3000}
           onClose={() => setToast({ ...toast, open: false })}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          sx={{
+            '& .MuiSnackbar-root': {
+              bottom: { xs: 16, sm: 24 }
+            }
+          }}
         >
-          <Box sx={{ width: "100%", borderRadius: 1, overflow: 'hidden', boxShadow: 3 }}>
+          <Box sx={{ 
+            width: "100%", 
+            borderRadius: 2, 
+            overflow: 'hidden', 
+            boxShadow: 3,
+            maxWidth: 400
+          }}>
             <Alert 
               severity={toast.severity} 
               onClose={() => setToast({ ...toast, open: false })}
               variant="filled"
+              sx={{
+                '& .MuiAlert-message': {
+                  fontWeight: 500
+                }
+              }}
             >
               {toast.message}
             </Alert>
@@ -748,7 +893,10 @@ export default function CreateProject() {
               sx={{
                 backgroundColor: (theme) => toast.severity === "success" ? 
                   theme.palette.success.dark : theme.palette.error.dark,
-                height: 4
+                height: 4,
+                '& .MuiLinearProgress-bar': {
+                  transition: 'transform 0.1s linear'
+                }
               }}
             />
           </Box>

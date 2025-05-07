@@ -613,27 +613,45 @@ export default function AdminPage() {
             Admin Dashboard
           </Typography>
           
-          {/* Special button for specific user */}
-          {hasSpecialAccess && (
-            <Tooltip title="Special User Access">
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => router.push('/admin/user-roles')}
-                fullWidth={isMobile}
-                sx={{ 
-                  background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
-                  boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
-                  '&:hover': {
-                    background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
-                    boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
-                  }
-                }}
-              >
-                User Management
-              </Button>
-            </Tooltip>
-          )}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {/* Special button for specific user */}
+            {hasSpecialAccess && (
+              <Tooltip title="Special User Access">
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => router.push('/admin/user-roles')}
+                  fullWidth={isMobile}
+                  sx={{ 
+                    background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
+                    boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
+                    '&:hover': {
+                      background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
+                      boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
+                    }
+                  }}
+                >
+                  User Management
+                </Button>
+              </Tooltip>
+            )}
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => router.push('/admin/assigned-projects')}
+              fullWidth={isMobile}
+              sx={{
+                background: "linear-gradient(45deg, #1976D2 0%, #1565C0 100%)",
+                boxShadow: "0 4px 20px rgba(25, 118, 210, 0.3)",
+                '&:hover': {
+                  background: "linear-gradient(45deg, #1565C0 0%, #0D47A1 100%)",
+                  boxShadow: "0 6px 25px rgba(25, 118, 210, 0.4)",
+                }
+              }}
+            >
+              My Assigned Projects
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ mb: 4 }}>

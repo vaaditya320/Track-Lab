@@ -8,29 +8,34 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  regId     String   @unique
-  email     String   @unique
-  role      Role     @default(STUDENT) // Role field with default value
-  projects  Project[] // The relation to projects remains unchanged
+  id              String    @id @default(uuid())
+  name            String
+  regId           String    @unique
+  email           String    @unique
+  role            Role      @default(STUDENT) // Role field with default value
+  projects        Project[] @relation("ProjectLeader") // The relation to projects as leader
+  assignedProjects Project[] @relation("ProjectAdmin") // The relation to projects as admin
 }
 
 model Project {
-  id           String   @id @default(uuid())
-  leaderId     String   // Foreign key to User
-  title        String   // Project title
-  teamMembers  String   // JSON stringified array for team members
-  components   String   // Text for borrowed components
-  summary      String?  // Nullable summary
-  projectPhoto String?  // Nullable project photo (image path)
-  status       Status   @default(PARTIAL) // Default status is PARTIAL
-  leader       User     @relation(fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
+  id             String   @id @default(uuid())
+  leaderId       String   // Foreign key to User
+  assignedAdminId String? // Foreign key to User (nullable)
+  title          String   // Project title
+  teamMembers    String   // JSON stringified array for team members
+  components     String   // Text for borrowed components
+  summary        String?  // Nullable summary
+  projectPhoto   String?  // Nullable project photo (image path)
+  status         Status   @default(PARTIAL) // Default status is PARTIAL
+  leader         User     @relation("ProjectLeader", fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
+  assignedAdmin  User?    @relation("ProjectAdmin", fields: [assignedAdminId], references: [id]) // Relation to User for admin
 }
+
 model Student {
   name   String // Student name
   regId  String @id @unique // Registration ID as primary key
 }
+
 enum Status {
   PARTIAL
   SUBMITTED
