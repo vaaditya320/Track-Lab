@@ -411,11 +411,16 @@ export default function Home() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchProjects();
+      // Redirect to /profile if any required field is missing
+      if (!session?.user?.branch || !session?.user?.section || !session?.user?.batch) {
+        router.push("/profile");
+      } else {
+        fetchProjects();
+      }
     } else if (status === "unauthenticated") {
       setLoading(false);
     }
-  }, [status, session?.user?.id]);
+  }, [status, session?.user?.id, session?.user?.branch, session?.user?.section, session?.user?.batch]);
 
   const handleDownloadSummary = async (projectId) => {
     setLoadingProjectId(projectId);

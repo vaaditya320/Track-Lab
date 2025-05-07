@@ -657,6 +657,18 @@ function UserAccount({ status, session }) {
             )}
           </Box>
           <Divider sx={{ my: 1 }} />
+          {/* Profile link for all users */}
+          <MenuItem 
+            component={Link} 
+            href="/profile" 
+            onClick={handleClose}
+            sx={{ py: 1.5 }}
+          >
+            <ListItemIcon>
+              <PersonIcon fontSize="small" color="primary" />
+            </ListItemIcon>
+            <Typography color="primary">Profile</Typography>
+          </MenuItem>
           {/* Admin Panel link in dropdown for admin users */}
           {isAdmin && (
             <MenuItem 
