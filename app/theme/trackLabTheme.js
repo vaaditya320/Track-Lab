@@ -15,6 +15,18 @@ export const createAppTheme = (mode) => createTheme({
       light: '#ff5bac',
       dark: '#c00060',
     },
+    teacher: {
+      main: '#6a0dad', // Deep purple for teachers
+      light: '#9c4dcc',
+      dark: '#38006b',
+      contrastText: '#ffffff',
+    },
+    student: {
+      main: '#00897b', // Teal for students
+      light: '#4db6ac',
+      dark: '#005b4f',
+      contrastText: '#ffffff',
+    },
     success: {
       main: '#06d6a0', // Mint green
       light: mode === 'dark' ? '#06d6a0' : '#56ffcf',

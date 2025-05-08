@@ -37,7 +37,7 @@ const ProjectCardSkeleton = () => {
       sx={{ 
         borderRadius: 2,
         height: '100%',
-        background: 'white'
+        bgcolor: 'background.paper',
       }}
     >
       <CardContent>
@@ -204,28 +204,12 @@ export default function TeacherAssignedProjects() {
     <Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
       <Box sx={{ 
         display: 'flex', 
-        justifyContent: 'space-between', 
+        justifyContent: 'flex-end', 
         alignItems: 'center',
         mb: 3,
         flexDirection: isMobile ? 'column' : 'row',
         gap: 2
       }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => router.push("/teacher")}
-          variant="outlined"
-          sx={{ 
-            borderRadius: 2,
-            textTransform: 'none',
-            '&:hover': {
-              backgroundColor: theme.palette.primary.main,
-              color: 'white'
-            }
-          }}
-        >
-          Back to Teacher Dashboard
-        </Button>
-
         <Button
           startIcon={<DownloadIcon />}
           onClick={handleDownloadExcel}
@@ -234,11 +218,19 @@ export default function TeacherAssignedProjects() {
           sx={{ 
             borderRadius: 2,
             textTransform: 'none',
-            background: "linear-gradient(45deg, #1976D2 0%, #1565C0 100%)",
-            boxShadow: "0 4px 20px rgba(25, 118, 210, 0.3)",
+            background: theme.palette.mode === 'dark' 
+              ? "linear-gradient(45deg, #1565C0 0%, #0D47A1 100%)"
+              : "linear-gradient(45deg, #1976D2 0%, #1565C0 100%)",
+            boxShadow: theme.palette.mode === 'dark'
+              ? "0 4px 20px rgba(13, 71, 161, 0.3)"
+              : "0 4px 20px rgba(25, 118, 210, 0.3)",
             '&:hover': {
-              background: "linear-gradient(45deg, #1565C0 0%, #0D47A1 100%)",
-              boxShadow: "0 6px 25px rgba(25, 118, 210, 0.4)",
+              background: theme.palette.mode === 'dark'
+                ? "linear-gradient(45deg, #0D47A1 0%, #01579B 100%)"
+                : "linear-gradient(45deg, #1565C0 0%, #0D47A1 100%)",
+              boxShadow: theme.palette.mode === 'dark'
+                ? "0 6px 25px rgba(13, 71, 161, 0.4)"
+                : "0 6px 25px rgba(25, 118, 210, 0.4)",
             }
           }}
         >
@@ -251,7 +243,9 @@ export default function TeacherAssignedProjects() {
         gutterBottom 
         sx={{ 
           fontWeight: 'bold',
-          background: "linear-gradient(45deg, #1976D2 0%, #1565C0 100%)",
+          background: theme.palette.mode === 'dark'
+            ? "linear-gradient(45deg, #1565C0 0%, #0D47A1 100%)"
+            : "linear-gradient(45deg, #1976D2 0%, #1565C0 100%)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           mb: 4
@@ -273,7 +267,7 @@ export default function TeacherAssignedProjects() {
             p: 4, 
             textAlign: 'center',
             borderRadius: 2,
-            bgcolor: 'background.default'
+            bgcolor: 'background.paper'
           }}
         >
           <Typography variant="h6" color="textSecondary">
@@ -289,6 +283,7 @@ export default function TeacherAssignedProjects() {
                   height: '100%',
                   borderRadius: 2,
                   transition: 'transform 0.2s, box-shadow 0.2s',
+                  bgcolor: 'background.paper',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     boxShadow: theme.shadows[4]
@@ -350,20 +345,12 @@ export default function TeacherAssignedProjects() {
 
                   <Divider sx={{ my: 2 }} />
 
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
                     <Chip
                       label={project.status}
                       color={project.status === 'SUBMITTED' ? 'success' : 'warning'}
                       size="small"
                     />
-                    <Tooltip title="View Details">
-                      <IconButton
-                        onClick={() => router.push(`/projects/${project.id}`)}
-                        size="small"
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                    </Tooltip>
                   </Box>
                 </CardContent>
               </Card>

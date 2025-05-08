@@ -170,7 +170,7 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
           </Box>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ flexDirection: 'column', p: 3, gap: 2 }}>
+      <DialogActions sx={{ flexDirection: 'column', gap: 1, p: 2 }}>
         {user.role === "STUDENT" ? (
           <Button
             variant="contained"
@@ -500,9 +500,16 @@ export default function AdminUsersPage() {
 
       await axios.put(`/api/admin/users`, { userId: id, role: newRole });
       
-      setUsers(users.map(user => 
+      // Update users list
+      const updatedUsers = users.map(user => 
         user.id === id ? { ...user, role: newRole } : user
-      ));
+      );
+      setUsers(updatedUsers);
+      
+      // Update selectedUser if it's the same user
+      if (selectedUser && selectedUser.id === id) {
+        setSelectedUser({ ...selectedUser, role: newRole });
+      }
       
       setToast({
         open: true,

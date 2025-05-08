@@ -35,11 +35,11 @@ export async function GET(req) {
       },
     });
 
-    await logAdminAction(
-      `All projects fetched by admin ${session.user.name}`,
-      LogType.OTHER,
-      { adminEmail: session.user.email }
-    );
+    // await logAdminAction(
+    //   `All projects fetched by admin ${session.user.name}`,
+    //   LogType.OTHER,
+    //   { adminEmail: session.user.email }
+    // );
 
     return new Response(
       JSON.stringify(

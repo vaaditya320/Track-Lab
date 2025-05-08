@@ -55,6 +55,8 @@ const navLinks = [
 // Admin panel link - Will only show to admin users
 const adminLink = { title: "Admin Panel", path: "/admin", icon: <AdminPanelSettingsIcon /> };
 const assignedProjectsLink = { title: "Assigned Projects", path: "/teacher/assigned-projects", icon: <AssignmentIcon /> };
+const userRoleManagementLink = { title: "User Management", path: "/admin/user-roles", icon: <AdminPanelSettingsIcon /> };
+const logsLink = { title: "Logs", path: "/admin/logs", icon: <AssignmentIcon /> };
 
 export default function Layout({ children }) {
   // Add state for theme mode
@@ -206,11 +208,22 @@ function NavigationHeader({ toggleThemeMode, mode }) {
   // Get links based on user role
   const getLinks = () => {
     if (status === "authenticated") {
-      if (isAdmin) {
-        return [...navLinks, adminLink];
-      } else if (session?.user?.role === "TEACHER") {
-        return [...navLinks, assignedProjectsLink];
+      const isSuperUser = session?.user?.email === "2023pietcsaaditya003@poornima.org";
+      let links = [...navLinks];
+      
+      // First add role-based links
+      if (session?.user?.role === "TEACHER") {
+        links.push(assignedProjectsLink);
+      } else if (isAdmin) {
+        links.push(logsLink);
       }
+      
+      // Then add superuser privileges if applicable
+      if (isSuperUser) {
+        links.push(userRoleManagementLink);
+      }
+      
+      return links;
     }
     return navLinks;
   };
@@ -607,9 +620,9 @@ function UserAccount({ status, session }) {
                 isAdmin 
                   ? theme.palette.secondary.light 
                   : isTeacher 
-                    ? theme.palette.info.light
+                    ? theme.palette.teacher.light
                     : isStudent
-                      ? theme.palette.success.light
+                      ? theme.palette.student.light
                       : theme.palette.primary.contrastText
               }`,
               transition: 'all 0.2s ease',
@@ -626,17 +639,17 @@ function UserAccount({ status, session }) {
                   isAdmin 
                     ? theme.palette.secondary.light 
                     : isTeacher 
-                      ? theme.palette.info.light
+                      ? theme.palette.teacher.light
                       : isStudent
-                        ? theme.palette.success.light
+                        ? theme.palette.student.light
                         : theme.palette.primary.contrastText,
                 color: theme => 
                   isAdmin 
                     ? theme.palette.secondary.contrastText 
                     : isTeacher 
-                      ? theme.palette.info.contrastText
+                      ? theme.palette.teacher.contrastText
                       : isStudent
-                        ? theme.palette.success.contrastText
+                        ? theme.palette.student.contrastText
                         : theme.palette.primary.main,
                 fontWeight: 'bold',
               }}
@@ -685,7 +698,7 @@ function UserAccount({ status, session }) {
             )}
             {isTeacher && (
               <Typography variant="body2" sx={{ 
-                color: theme => theme.palette.info.main,
+                color: theme => theme.palette.teacher.main,
                 fontWeight: 'bold',
                 mt: 0.5
               }}>
@@ -694,7 +707,7 @@ function UserAccount({ status, session }) {
             )}
             {isStudent && (
               <Typography variant="body2" sx={{ 
-                color: theme => theme.palette.success.main,
+                color: theme => theme.palette.student.main,
                 fontWeight: 'bold',
                 mt: 0.5
               }}>
