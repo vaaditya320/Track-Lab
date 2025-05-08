@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { logAdminAction } from "@/lib/logger";
+import { logAdminAction, LogType } from "@/lib/logger";
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);

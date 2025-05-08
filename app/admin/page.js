@@ -19,6 +19,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InfoIcon from '@mui/icons-material/Info';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
@@ -651,6 +652,23 @@ export default function AdminPage() {
               }}
             >
               My Assigned Projects
+            </Button>
+            <Button
+              variant="contained"
+              color="info"
+              onClick={() => router.push('/admin/logs')}
+              fullWidth={isMobile}
+              startIcon={<AssessmentIcon />}
+              sx={{
+                background: "linear-gradient(45deg, #00BCD4 0%, #0097A7 100%)",
+                boxShadow: "0 4px 20px rgba(0, 188, 212, 0.3)",
+                '&:hover': {
+                  background: "linear-gradient(45deg, #0097A7 0%, #006064 100%)",
+                  boxShadow: "0 6px 25px rgba(0, 188, 212, 0.4)",
+                }
+              }}
+            >
+              System Logs
             </Button>
           </Box>
         </Box>

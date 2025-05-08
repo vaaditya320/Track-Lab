@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import { logAdminAction } from "@/lib/logger";
+import { logAdminAction, LogType } from "@/lib/logger";
 
 // GET all users (admin only)
 export async function GET(request) {
@@ -26,6 +26,12 @@ export async function GET(request) {
         batch: true
       }
     });
+
+    await logAdminAction(
+      `All users fetched by admin ${session.user.name}`,
+      LogType.OTHER,
+      { adminEmail: session.user.email }
+    );
 
     return NextResponse.json(users);
   } catch (error) {
@@ -93,7 +99,9 @@ export async function PUT(request) {
 
     // Log the admin action
     await logAdminAction(
-      `User ${userToUpdate.name} (${userToUpdate.email}) role changed from ${userToUpdate.role} to ${role} by admin ${session.user.name} (${session.user.email})`
+      `User ${userToUpdate.name} (${userToUpdate.email}) role changed from ${userToUpdate.role} to ${role} by admin ${session.user.name} (${session.user.email})`,
+      LogType.OTHER,
+      { adminEmail: session.user.email }
     );
 
     return NextResponse.json(updatedUser);
@@ -133,7 +141,9 @@ export async function DELETE(req) {
 
     // Log the admin action
     await logAdminAction(
-      `User ${userToDelete.name} (${userToDelete.email}) (${userToDelete.role}) deleted by admin ${session.user.name} (${session.user.email})`
+      `User ${userToDelete.name} (${userToDelete.email}) (${userToDelete.role}) deleted by admin ${session.user.name} (${session.user.email})`,
+      LogType.OTHER,
+      { adminEmail: session.user.email }
     );
 
     return new Response(JSON.stringify({ message: "User deleted successfully" }), { status: 200 });

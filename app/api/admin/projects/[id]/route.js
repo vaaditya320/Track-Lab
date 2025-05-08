@@ -1,7 +1,8 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
-import { logAdminAction } from "@/lib/logger";
+import { logAdminAction, LogType } from "@/lib/logger";
+import { NextResponse } from "next/server";
 
 async function isAdmin(session) {
   if (!session || !session.user || !session.user.email) return false;
@@ -77,7 +78,9 @@ export async function PUT(req, { params }) {
 
     // Log the admin action
     await logAdminAction(
-      `Project "${projectBeforeUpdate.title}" updated by admin ${session.user.name} (${session.user.email}). Status changed from ${projectBeforeUpdate.status} to ${status || projectBeforeUpdate.status}`
+      `Project updated: ${updatedProject.title} (ID: ${projectId})`,
+      LogType.PROJECT_UPDATE,
+      { projectId: projectId, projectTitle: updatedProject.title, changes: { title, teamMembers, components, summary, status, projectPhoto } }
     );
 
     return new Response(JSON.stringify(updatedProject), { status: 200 });
@@ -115,7 +118,9 @@ export async function DELETE(req, { params }) {
 
     // Log the admin action
     await logAdminAction(
-      `Project "${projectToDelete.title}" (status: ${projectToDelete.status}) deleted by admin ${session.user.name} (${session.user.email})`
+      `Project deleted: ${projectToDelete.title} (ID: ${projectId})`,
+      LogType.PROJECT_DELETION,
+      { projectId: projectId, projectTitle: projectToDelete.title }
     );
 
     return new Response(JSON.stringify({ message: "Project deleted successfully" }), { status: 200 });

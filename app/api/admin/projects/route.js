@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import { logAdminAction } from "@/lib/logger";
+import { logAdminAction, LogType } from "@/lib/logger";
 
 // Admin check middleware
 async function isAdmin(session) {
@@ -34,6 +34,12 @@ export async function GET(req) {
         },
       },
     });
+
+    await logAdminAction(
+      `All projects fetched by admin ${session.user.name}`,
+      LogType.OTHER,
+      { adminEmail: session.user.email }
+    );
 
     return new Response(
       JSON.stringify(
@@ -83,7 +89,9 @@ export async function POST(req) {
 
     // Log the admin action
     await logAdminAction(
-      `Project "${body.title}" created by admin ${session.user.name} (${session.user.email}) with leader ${leader.name} (${leader.email})`
+      `Project created: ${newProject.title} (ID: ${newProject.id})`,
+      LogType.PROJECT_CREATION,
+      { projectId: newProject.id, projectTitle: newProject.title }
     );
 
     return new Response(JSON.stringify(newProject), { status: 201 });
