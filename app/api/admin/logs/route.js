@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { CloudWatchLogsClient, GetLogEventsCommand } from "@aws-sdk/client-cloudwatch-logs";
 
-const LOG_GROUP_NAME = process.env.LOG_GROUP_NAME || 'Tracklab';
+// Use the same log group name as in lib/logger.js
+const LOG_GROUP_NAME = 'Tracklab';
 const LOG_STREAM_NAME = 'Admin Actions';
 
 export async function GET() {
