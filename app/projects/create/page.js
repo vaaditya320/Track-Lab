@@ -45,7 +45,7 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import PersonIcon from '@mui/icons-material/Person';
 import SearchIcon from '@mui/icons-material/Search';
 
-// Loading skeleton for create project page
+// Loading skeleton component
 const CreateProjectSkeleton = () => {
   const theme = useTheme();
   
@@ -183,10 +183,7 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
       }
     };
 
-    // Add event listener to the document
     document.addEventListener('keydown', handleKeyDown);
-    
-    // Clean up
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
@@ -208,7 +205,6 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     setOpen(false);
   };
 
-  // Add a function to handle blur event
   const handleBlur = () => {
     if (isClickingSuggestion.current) {
       isClickingSuggestion.current = false;
@@ -221,7 +217,6 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     }, 150);
   };
 
-  // Helper function to highlight matching text
   const highlightMatch = (text, query) => {
     if (!query.trim()) return text;
     
@@ -235,7 +230,6 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     );
   };
   
-  // Random avatar colors for visual distinction
   const getAvatarColor = (name) => {
     const colors = [
       '#1E88E5', '#43A047', '#E53935', '#8E24AA', '#FB8C00', 
@@ -245,7 +239,6 @@ const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
     return colors[charCode % colors.length];
   };
   
-  // Get initials for avatar
   const getInitials = (name) => {
     return name
       .split(' ')
@@ -411,23 +404,23 @@ export default function CreateProject() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [progress, setProgress] = useState(100);
-  const [admins, setAdmins] = useState([]);
-  const [selectedAdminId, setSelectedAdminId] = useState(null);
+  const [teachers, setTeachers] = useState([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState(null);
 
   useEffect(() => {
     setTeamMembers(Array(numMembers).fill(""));
   }, [numMembers]);
 
   useEffect(() => {
-    const fetchAdmins = async () => {
+    const fetchTeachers = async () => {
       try {
-        const response = await axios.get("/api/admins");
-        setAdmins(response.data);
+        const response = await axios.get("/api/users?role=TEACHER");
+        setTeachers(response.data);
       } catch (error) {
-        console.error("Error fetching admins:", error);
+        console.error("Error fetching teachers:", error);
       }
     };
-    fetchAdmins();
+    fetchTeachers();
   }, []);
 
   const handleTeamMemberChange = (index, value) => {
@@ -462,6 +455,11 @@ export default function CreateProject() {
       return;
     }
 
+    if (!selectedTeacherId) {
+      setToast({ open: true, message: "Please select a teacher for the project.", severity: "error" });
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -470,10 +468,12 @@ export default function CreateProject() {
         title: trimmedTitle,
         teamMembers: trimmedTeamMembers.join(", "),
         components: trimmedComponents,
-        assignedAdminId: selectedAdminId || null,
+        assignedTeacherId: selectedTeacherId,
+        leaderId: session?.user?.id,
+        status: "PARTIAL" // Using the default status from schema
       };
 
-      const response = await axios.post("/api/projects", projectData);
+      const response = await axios.post("/api/projects/create", projectData);
 
       if (response.status === 201) {
         setToast({ 
@@ -669,7 +669,7 @@ export default function CreateProject() {
                     </Box>
                   </Grid>
 
-                  {/* Admin Selection */}
+                  {/* Teacher Selection */}
                   <Grid item xs={12}>
                     <Box sx={{ 
                       p: 2, 
@@ -678,16 +678,16 @@ export default function CreateProject() {
                       border: (theme) => `1px solid ${theme.palette.divider}`,
                     }}>
                       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        Assign Project Admin
+                        Assign Project Teacher
                       </Typography>
                       <FormControl fullWidth required>
-                        <InputLabel id="admin-select-label">Select Project Admin</InputLabel>
+                        <InputLabel id="teacher-select-label">Select Project Teacher</InputLabel>
                         <Select
-                          labelId="admin-select-label"
-                          id="admin-select"
-                          value={selectedAdminId || ""}
-                          label="Select Project Admin"
-                          onChange={(e) => setSelectedAdminId(e.target.value)}
+                          labelId="teacher-select-label"
+                          id="teacher-select"
+                          value={selectedTeacherId || ""}
+                          label="Select Project Teacher"
+                          onChange={(e) => setSelectedTeacherId(e.target.value)}
                           startAdornment={<PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />}
                           sx={{
                             '& .MuiSelect-select': {
@@ -710,14 +710,14 @@ export default function CreateProject() {
                             if (!selected) {
                               return <Typography color="text.secondary">Select from dropdown</Typography>;
                             }
-                            const admin = admins.find(a => a.id === selected);
-                            return admin ? admin.name : '';
+                            const teacher = teachers.find(t => t.id === selected);
+                            return teacher ? teacher.name : '';
                           }}
                         >
-                          {admins.map((admin) => (
+                          {teachers.map((teacher) => (
                             <MenuItem 
-                              key={admin.id} 
-                              value={admin.id}
+                              key={teacher.id} 
+                              value={teacher.id}
                               sx={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -740,14 +740,14 @@ export default function CreateProject() {
                                   flexShrink: 0
                                 }}
                               >
-                                {admin.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                {teacher.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                               </Box>
                               <Box>
                                 <Typography variant="body2">
-                                  {admin.name}
+                                  {teacher.name}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  {admin.regId}
+                                  {teacher.regId}
                                 </Typography>
                               </Box>
                             </MenuItem>
@@ -755,7 +755,7 @@ export default function CreateProject() {
                         </Select>
                       </FormControl>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, ml: 1 }}>
-                        Select an admin who will oversee this project
+                        Select a teacher who will oversee this project
                       </Typography>
                     </Box>
                   </Grid>

@@ -89,7 +89,7 @@ const ProjectCardSkeleton = () => {
   );
 };
 
-export default function AssignedProjects() {
+export default function TeacherAssignedProjects() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const theme = useTheme();
@@ -101,9 +101,13 @@ export default function AssignedProjects() {
 
   useEffect(() => {
     if (status === "authenticated") {
+      if (session?.user?.role !== "TEACHER") {
+        router.push("/");
+        return;
+      }
       fetchAssignedProjects();
     }
-  }, [status]);
+  }, [status, session]);
 
   const fetchAssignedProjects = async () => {
     try {
@@ -120,7 +124,7 @@ export default function AssignedProjects() {
     } catch (error) {
       console.error("Error fetching assigned projects:", error);
       if (error.response?.status === 403) {
-        setError("You don't have permission to view assigned projects. Admin access required.");
+        setError("You don't have permission to view assigned projects. Teacher access required.");
         router.push("/");
       } else if (error.response?.status === 401) {
         setError("Please sign in to view assigned projects.");
@@ -208,7 +212,7 @@ export default function AssignedProjects() {
       }}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => router.push("/admin")}
+          onClick={() => router.push("/teacher")}
           variant="outlined"
           sx={{ 
             borderRadius: 2,
@@ -219,7 +223,7 @@ export default function AssignedProjects() {
             }
           }}
         >
-          Back to Admin Dashboard
+          Back to Teacher Dashboard
         </Button>
 
         <Button
@@ -257,23 +261,23 @@ export default function AssignedProjects() {
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
-      {!error && projects.length === 0 ? (
+      {projects.length === 0 ? (
         <Paper 
+          elevation={0} 
           sx={{ 
             p: 4, 
-            textAlign: "center",
+            textAlign: 'center',
             borderRadius: 2,
-            background: theme.palette.background.paper,
-            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)"
+            bgcolor: 'background.default'
           }}
         >
-          <Typography color="text.secondary" variant="h6">
-            No projects have been assigned to you yet.
+          <Typography variant="h6" color="textSecondary">
+            No projects assigned to you yet.
           </Typography>
         </Paper>
       ) : (
@@ -282,94 +286,80 @@ export default function AssignedProjects() {
             <Grid item xs={12} md={6} key={project.id}>
               <Card 
                 sx={{ 
+                  height: '100%',
                   borderRadius: 2,
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   '&:hover': {
                     transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 24px rgba(25, 118, 210, 0.15)'
+                    boxShadow: theme.shadows[4]
                   }
                 }}
               >
                 <CardContent>
-                  <Typography 
-                    variant="h6" 
-                    gutterBottom
-                    sx={{ 
-                      fontWeight: 'bold',
-                      color: '#1976D2'
-                    }}
-                  >
+                  <Typography variant="h6" gutterBottom fontWeight="bold">
                     {project.title}
                   </Typography>
-                  
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
                     <Avatar 
                       sx={{ 
-                        bgcolor: '#1976D2',
-                        boxShadow: '0 2px 8px rgba(25, 118, 210, 0.15)'
+                        bgcolor: theme.palette.primary.main,
+                        width: 40,
+                        height: 40
                       }}
                     >
-                      {project.leader.name.split(' ').map(n => n[0]).join('')}
+                      {project.leader.name.charAt(0)}
                     </Avatar>
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                        Project Leader: {project.leader.name}
+                      <Typography variant="subtitle2" color="textSecondary">
+                        Project Leader
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {project.leader.regId}
+                      <Typography variant="body2">
+                        {project.leader.name} ({project.leader.regId})
                       </Typography>
                     </Box>
                   </Stack>
 
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Team Members:
-                  </Typography>
-                  <Box sx={{ mb: 2 }}>
-                    {Array.isArray(project.teamMembers) && project.teamMembers.map((member, index) => (
-                      <Chip
-                        key={index}
-                        label={member}
-                        size="small"
-                        sx={{ 
-                          mr: 1, 
-                          mb: 1,
-                          background: '#E3F2FD',
-                          color: '#1976D2',
-                          fontWeight: 500
-                        }}
-                      />
-                    ))}
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                      Team Members
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {project.teamMembers.map((member, index) => (
+                        <Chip
+                          key={index}
+                          label={member}
+                          size="small"
+                          sx={{ 
+                            bgcolor: theme.palette.primary.light,
+                            color: theme.palette.primary.contrastText
+                          }}
+                        />
+                      ))}
+                    </Box>
                   </Box>
 
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Components:
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 2 }}>
-                    {project.components}
-                  </Typography>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                      Components
+                    </Typography>
+                    <Typography variant="body2">
+                      {project.components}
+                    </Typography>
+                  </Box>
 
                   <Divider sx={{ my: 2 }} />
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Chip
-                      label={project.status || "PENDING"}
-                      color={project.status === "APPROVED" ? "success" : "default"}
+                      label={project.status}
+                      color={project.status === 'SUBMITTED' ? 'success' : 'warning'}
                       size="small"
-                      sx={{ 
-                        borderRadius: 1,
-                        fontWeight: 'medium'
-                      }}
                     />
-                    <Tooltip title="View Project Details">
-                      <IconButton 
-                        onClick={() => router.push(`/admin/projects/${project.id}`)}
-                        sx={{ 
-                          color: '#1976D2',
-                          '&:hover': {
-                            backgroundColor: '#E3F2FD',
-                            color: '#1565C0'
-                          }
-                        }}
+                    <Tooltip title="View Details">
+                      <IconButton
+                        onClick={() => router.push(`/projects/${project.id}`)}
+                        size="small"
                       >
                         <VisibilityIcon />
                       </IconButton>

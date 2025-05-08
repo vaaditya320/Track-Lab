@@ -128,23 +128,119 @@ export default function SubmitPage() {
     }
   };
 
-  if (loading || status === "loading") {
+  // Loading skeleton component
+  const SubmitProjectSkeleton = () => {
+    const theme = useTheme();
+    
     return (
-      <Container maxWidth="lg" sx={{ height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Box sx={{ textAlign: "center" }}>
-            <CircularProgress size={60} thickness={4} />
-            <Typography variant="h6" sx={{ mt: 2, fontWeight: 500 }}>
-              Loading project details...
-            </Typography>
+      <Container maxWidth="lg" sx={{ py: 5 }}>
+        <Box sx={{ mb: 3 }}>
+          <motion.div 
+            animate={{ opacity: [0.5, 0.8, 0.5] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+          >
+            <Box sx={{ height: 40, width: '200px', bgcolor: 'action.hover', borderRadius: 1, mb: 2 }} />
+          </motion.div>
+        </Box>
+
+        <Card elevation={3} sx={{ borderRadius: 2, overflow: "hidden" }}>
+          <Box sx={{ p: 3, py: 4, background: "linear-gradient(135deg, #4527a0, #7b1fa2)" }}>
+            <motion.div 
+              animate={{ opacity: [0.5, 0.8, 0.5] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+            >
+              <Box sx={{ height: 40, width: '60%', bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 1, mb: 2 }} />
+              <Box sx={{ height: 30, width: '40%', bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 1 }} />
+            </motion.div>
           </Box>
-        </motion.div>
+
+          <CardContent sx={{ p: 3 }}>
+            <Grid container spacing={4}>
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 4 }}>
+                  <motion.div 
+                    animate={{ opacity: [0.5, 0.8, 0.5] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  >
+                    <Box sx={{ height: 30, width: '40%', bgcolor: 'action.hover', borderRadius: 1, mb: 2 }} />
+                    <Box sx={{ height: 1, width: '100%', bgcolor: 'divider', mb: 2 }} />
+                    
+                    {/* Team members skeleton */}
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
+                      {[1, 2, 3].map((i) => (
+                        <Box
+                          key={i}
+                          sx={{
+                            height: 32,
+                            width: 120,
+                            bgcolor: 'action.hover',
+                            borderRadius: 16,
+                            mb: 1
+                          }}
+                        />
+                      ))}
+                    </Box>
+
+                    {/* Summary field skeleton */}
+                    <Box sx={{ height: 200, bgcolor: 'action.hover', borderRadius: 1, mb: 3 }} />
+                    
+                    {/* Submit button skeleton */}
+                    <Box sx={{ height: 48, bgcolor: 'action.hover', borderRadius: 2 }} />
+                  </motion.div>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box sx={{ mb: 4 }}>
+                  <motion.div 
+                    animate={{ opacity: [0.5, 0.8, 0.5] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  >
+                    <Box sx={{ height: 30, width: '40%', bgcolor: 'action.hover', borderRadius: 1, mb: 2 }} />
+                    <Box sx={{ height: 1, width: '100%', bgcolor: 'divider', mb: 2 }} />
+                    
+                    {/* Photo upload skeleton */}
+                    <Box sx={{ 
+                      height: 320,
+                      bgcolor: 'action.hover',
+                      borderRadius: 2,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 2
+                    }}>
+                      <Box sx={{ 
+                        width: 60,
+                        height: 60,
+                        bgcolor: 'rgba(0,0,0,0.1)',
+                        borderRadius: '50%'
+                      }} />
+                      <Box sx={{ 
+                        height: 24,
+                        width: '60%',
+                        bgcolor: 'rgba(0,0,0,0.1)',
+                        borderRadius: 1
+                      }} />
+                      <Box sx={{ 
+                        height: 20,
+                        width: '40%',
+                        bgcolor: 'rgba(0,0,0,0.1)',
+                        borderRadius: 1
+                      }} />
+                    </Box>
+                  </motion.div>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
       </Container>
     );
+  };
+
+  if (loading || status === "loading") {
+    return <SubmitProjectSkeleton />;
   }
 
   if (!project) {
