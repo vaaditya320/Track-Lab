@@ -1,68 +1,108 @@
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { logAdminAction } from "@/lib/logger";
 
-export async function GET(req) {
-  const session = await getServerSession(authOptions);
-
-  // Only the specified admin email can access
-  if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
-
+// GET all users (admin only)
+export async function GET(request) {
   try {
-    const users = await prisma.user.findMany();
-    return new Response(JSON.stringify(users), { status: 200 });
+    const session = await getServerSession(authOptions);
+    
+    // Only the specified admin email can access
+    if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        regId: true,
+        role: true,
+        branch: true,
+        section: true,
+        batch: true
+      }
+    });
+
+    return NextResponse.json(users);
   } catch (error) {
     console.error("Error fetching users:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch users" },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(req) {
-  const session = await getServerSession(authOptions);
-
-  // Only the specified admin email can promote/demote users
-  if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
-
+// PUT to update user role (admin only)
+export async function PUT(request) {
   try {
-    const { id, action } = await req.json();
-
-    if (!id || !["PROMOTE", "DEMOTE"].includes(action)) {
-      return new Response(JSON.stringify({ error: "Invalid request" }), { status: 400 });
+    const session = await getServerSession(authOptions);
+    
+    // Only the specified admin email can update roles
+    if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch current user role and email
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { role: true, email: true, name: true },
+    const body = await request.json();
+    const { userId, role } = body;
+
+    if (!userId || !role) {
+      return NextResponse.json(
+        { error: "User ID and role are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate role
+    if (!["STUDENT", "TEACHER", "ADMIN"].includes(role)) {
+      return NextResponse.json(
+        { error: "Invalid role" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch user details before update for logging
+    const userToUpdate = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, role: true, name: true },
     });
 
-    if (!user) {
-      return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+    if (!userToUpdate) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
-
-    // Determine new role
-    const newRole = action === "PROMOTE" ? "ADMIN" : "STUDENT";
 
     // Update user role
     const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { role: newRole },
+      where: { id: userId },
+      data: { role },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        regId: true,
+        role: true
+      }
     });
 
     // Log the admin action
     await logAdminAction(
-      `User ${user.name} (${user.email}) ${action.toLowerCase()}d from ${user.role} to ${newRole} by admin ${session.user.name} (${session.user.email})`
+      `User ${userToUpdate.name} (${userToUpdate.email}) role changed from ${userToUpdate.role} to ${role} by admin ${session.user.name} (${session.user.email})`
     );
 
-    return new Response(JSON.stringify(updatedUser), { status: 200 });
+    return NextResponse.json(updatedUser);
   } catch (error) {
     console.error("Error updating user role:", error);
-    return new Response(JSON.stringify({ error: "Failed to update user role" }), { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update user role" },
+      { status: 500 }
+    );
   }
 }
 

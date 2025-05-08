@@ -12,7 +12,7 @@ import {
   CircularProgress, Box, Grid, Card, CardContent, TextField,
   MenuItem, Select, InputLabel, FormControl, LinearProgress,
   Skeleton, alpha, Dialog, DialogTitle, DialogContent, DialogActions,
-  Divider, IconButton
+  IconButton
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { motion } from "framer-motion";
@@ -88,6 +88,16 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
           text: "rgb(255, 129, 152)"
         }
       },
+      TEACHER: {
+        light: {
+          bg: "rgba(54, 162, 235, 0.15)",
+          text: "rgb(54, 162, 235)"
+        },
+        dark: {
+          bg: "rgba(54, 162, 235, 0.25)",
+          text: "rgb(84, 182, 255)"
+        }
+      },
       STUDENT: {
         light: {
           bg: "rgba(75, 192, 192, 0.15)",
@@ -127,7 +137,6 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
       }}
     >
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {/* Fix: Don't nest Typography variants that create different heading levels */}
         <Typography component="span" variant="h6" fontWeight="bold">User Details</Typography>
         <IconButton onClick={handleClose} size="small">
           <CloseIcon />
@@ -165,13 +174,34 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
         {user.role === "STUDENT" ? (
           <Button
             variant="contained"
-            color="success"
+            color="primary"
             fullWidth
             onClick={() => handleRoleChange(user.id, "PROMOTE")}
             disabled={updatingId === user.id}
           >
-            {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Admin"}
+            {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Teacher"}
           </Button>
+        ) : user.role === "TEACHER" ? (
+          <>
+            <Button
+              variant="contained"
+              color="success"
+              fullWidth
+              onClick={() => handleRoleChange(user.id, "PROMOTE")}
+              disabled={updatingId === user.id}
+            >
+              {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Admin"}
+            </Button>
+            <Button
+              variant="contained"
+              color="warning"
+              fullWidth
+              onClick={() => handleRoleChange(user.id, "DEMOTE")}
+              disabled={updatingId === user.id}
+            >
+              {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Student"}
+            </Button>
+          </>
         ) : (
           <Button
             variant="contained"
@@ -180,7 +210,7 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
             onClick={() => handleRoleChange(user.id, "DEMOTE")}
             disabled={updatingId === user.id}
           >
-            {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Student"}
+            {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Teacher"}
           </Button>
         )}
         
@@ -442,42 +472,54 @@ export default function AdminUsersPage() {
   };
 
   // Handle Promote/Demote
-async function handleRoleChange(id, action) {
-  setUpdatingId(id);
-  try {
-    const res = await fetch("/api/admin/users", {
-      method: "PUT",
-      headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.user?.id}`
-      },
-      body: JSON.stringify({ id, action }),
-    });
-    
-    if (!res.ok) throw new Error("Failed to update role");
-    const updatedUser = await res.json();
-    
-    // Update state with new role
-    setUsers(users.map(user => (user.id === id ? { ...user, role: updatedUser.role } : user)));
-    setToast({ 
-      open: true, 
-      message: `User ${action === "PROMOTE" ? "promoted" : "demoted"} successfully`, 
-      severity: "success" 
-    });
-    
-    // Close the dialog after successful update
-    setDialogOpen(false);
-  } catch (error) {
-    console.error(error);
-    setToast({ 
-      open: true, 
-      message: `Failed to ${action === "PROMOTE" ? "promote" : "demote"} user`, 
-      severity: "error" 
-    });
-  } finally {
-    setUpdatingId(null);
+  async function handleRoleChange(id, action) {
+    try {
+      setUpdatingId(id);
+      let newRole;
+      
+      // Get current user's role
+      const currentUser = users.find(user => user.id === id);
+      if (!currentUser) {
+        throw new Error("User not found");
+      }
+
+      // Determine new role based on current role and action
+      switch (currentUser.role) {
+        case "STUDENT":
+          newRole = "TEACHER";
+          break;
+        case "TEACHER":
+          newRole = action === "PROMOTE" ? "ADMIN" : "STUDENT";
+          break;
+        case "ADMIN":
+          newRole = "TEACHER";
+          break;
+        default:
+          throw new Error("Invalid role");
+      }
+
+      await axios.put(`/api/admin/users`, { userId: id, role: newRole });
+      
+      setUsers(users.map(user => 
+        user.id === id ? { ...user, role: newRole } : user
+      ));
+      
+      setToast({
+        open: true,
+        message: `User role updated to ${newRole}`,
+        severity: "success"
+      });
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      setToast({
+        open: true,
+        message: "Failed to update user role. Please try again.",
+        severity: "error"
+      });
+    } finally {
+      setUpdatingId(null);
+    }
   }
-}
 
   const handleFilterChange = (e) => {
     setFilter({ ...filter, [e.target.name]: e.target.value });
@@ -507,6 +549,16 @@ async function handleRoleChange(id, action) {
         dark: {
           bg: "rgba(255, 99, 132, 0.25)",
           text: "rgb(255, 129, 152)"
+        }
+      },
+      TEACHER: {
+        light: {
+          bg: "rgba(54, 162, 235, 0.15)",
+          text: "rgb(54, 162, 235)"
+        },
+        dark: {
+          bg: "rgba(54, 162, 235, 0.25)",
+          text: "rgb(84, 182, 255)"
         }
       },
       STUDENT: {
@@ -576,6 +628,7 @@ async function handleRoleChange(id, action) {
                 <Select value={filter.role} label="Role" name="role" onChange={handleFilterChange}>
                   <MenuItem value="">All Roles</MenuItem>
                   <MenuItem value="ADMIN">Admin</MenuItem>
+                  <MenuItem value="TEACHER">Teacher</MenuItem>
                   <MenuItem value="STUDENT">Student</MenuItem>
                 </Select>
               </FormControl>
@@ -670,8 +723,37 @@ async function handleRoleChange(id, action) {
                                 disabled={updatingId === user.id}
                                 sx={{ mr: 1 }}
                               >
-                                {updatingId === user.id ? <CircularProgress size={20} /> : "Promote"}
+                                {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Teacher"}
                               </Button>
+                            ) : user.role === "TEACHER" ? (
+                              <>
+                                <Button
+                                  variant="contained"
+                                  color="success"
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRoleChange(user.id, "PROMOTE");
+                                  }}
+                                  disabled={updatingId === user.id}
+                                  sx={{ mr: 1 }}
+                                >
+                                  {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Admin"}
+                                </Button>
+                                <Button
+                                  variant="contained"
+                                  color="warning"
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRoleChange(user.id, "DEMOTE");
+                                  }}
+                                  disabled={updatingId === user.id}
+                                  sx={{ mr: 1 }}
+                                >
+                                  {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Student"}
+                                </Button>
+                              </>
                             ) : (
                               <Button
                                 variant="contained"
@@ -684,7 +766,7 @@ async function handleRoleChange(id, action) {
                                 disabled={updatingId === user.id}
                                 sx={{ mr: 1 }}
                               >
-                                {updatingId === user.id ? <CircularProgress size={20} /> : "Demote"}
+                                {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Teacher"}
                               </Button>
                             )}
                             

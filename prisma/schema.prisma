@@ -23,7 +23,7 @@ model User {
 model Project {
   id             String   @id @default(uuid())
   leaderId       String   // Foreign key to User
-  assignedAdminId String? // Foreign key to User (nullable)
+  assignedTeacherId String? // Foreign key to User (nullable)
   title          String   // Project title
   teamMembers    String   // JSON stringified array for team members
   components     String   // Text for borrowed components
@@ -31,7 +31,7 @@ model Project {
   projectPhoto   String?  // Nullable project photo (image path)
   status         Status   @default(PARTIAL) // Default status is PARTIAL
   leader         User     @relation("ProjectLeader", fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
-  assignedAdmin  User?    @relation("ProjectAdmin", fields: [assignedAdminId], references: [id]) // Relation to User for admin
+  assignedTeacher  User?    @relation("ProjectAdmin", fields: [assignedTeacherId], references: [id]) // Relation to User for teacher
 }
 
 model Student {
@@ -46,6 +46,7 @@ enum Status {
 
 enum Role {
   STUDENT
+  TEACHER
   ADMIN
 }
 

@@ -10,18 +10,24 @@ export async function POST(req) {
   }
 
   try {
-    const { title, teamMembers, components } = await req.json();
+    const { title, teamMembers, components, assignedTeacherId } = await req.json();
 
     if (!title || !teamMembers || !components) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 });
     }
 
+    // Convert teamMembers string to array if it's a string
+    const teamMembersArray = typeof teamMembers === 'string' 
+      ? teamMembers.split(',').map(member => member.trim())
+      : teamMembers;
+
     const project = await prisma.project.create({
       data: {
         title,
         leaderId: session.user.id,
-        teamMembers: JSON.stringify(teamMembers), // Store as JSON string
+        teamMembers: JSON.stringify(teamMembersArray),
         components,
+        assignedTeacherId: assignedTeacherId || null,
       },
     });
 

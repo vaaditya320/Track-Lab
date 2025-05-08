@@ -54,7 +54,7 @@ const navLinks = [
 
 // Admin panel link - Will only show to admin users
 const adminLink = { title: "Admin Panel", path: "/admin", icon: <AdminPanelSettingsIcon /> };
-const assignedProjectsLink = { title: "Assigned Projects", path: "/admin/assigned-projects", icon: <AssignmentIcon /> };
+const assignedProjectsLink = { title: "Assigned Projects", path: "/teacher/assigned-projects", icon: <AssignmentIcon /> };
 
 export default function Layout({ children }) {
   // Add state for theme mode
@@ -205,8 +205,12 @@ function NavigationHeader({ toggleThemeMode, mode }) {
   
   // Get links based on user role
   const getLinks = () => {
-    if (status === "authenticated" && isAdmin) {
-      return [...navLinks, adminLink, assignedProjectsLink];
+    if (status === "authenticated") {
+      if (isAdmin) {
+        return [...navLinks, adminLink];
+      } else if (session?.user?.role === "TEACHER") {
+        return [...navLinks, assignedProjectsLink];
+      }
     }
     return navLinks;
   };
@@ -575,6 +579,8 @@ function UserAccount({ status, session }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const isAdmin = session?.user?.role === "ADMIN";
+  const isTeacher = session?.user?.role === "TEACHER";
+  const isStudent = session?.user?.role === "STUDENT";
   const pathname = usePathname();
   
   const handleClick = (event) => {
@@ -597,7 +603,15 @@ function UserAccount({ status, session }) {
             aria-expanded={open ? 'true' : undefined}
             sx={{ 
               p: 0.5,
-              border: theme => `2px solid ${isAdmin ? theme.palette.secondary.light : theme.palette.primary.contrastText}`,
+              border: theme => `2px solid ${
+                isAdmin 
+                  ? theme.palette.secondary.light 
+                  : isTeacher 
+                    ? theme.palette.info.light
+                    : isStudent
+                      ? theme.palette.success.light
+                      : theme.palette.primary.contrastText
+              }`,
               transition: 'all 0.2s ease',
               '&:hover': { 
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -608,8 +622,22 @@ function UserAccount({ status, session }) {
               sx={{ 
                 width: 32, 
                 height: 32,
-                bgcolor: theme => isAdmin ? theme.palette.secondary.light : theme.palette.primary.contrastText,
-                color: theme => isAdmin ? theme.palette.secondary.contrastText : theme.palette.primary.main,
+                bgcolor: theme => 
+                  isAdmin 
+                    ? theme.palette.secondary.light 
+                    : isTeacher 
+                      ? theme.palette.info.light
+                      : isStudent
+                        ? theme.palette.success.light
+                        : theme.palette.primary.contrastText,
+                color: theme => 
+                  isAdmin 
+                    ? theme.palette.secondary.contrastText 
+                    : isTeacher 
+                      ? theme.palette.info.contrastText
+                      : isStudent
+                        ? theme.palette.success.contrastText
+                        : theme.palette.primary.main,
                 fontWeight: 'bold',
               }}
             >
@@ -653,6 +681,24 @@ function UserAccount({ status, session }) {
                 mt: 0.5
               }}>
                 Admin
+              </Typography>
+            )}
+            {isTeacher && (
+              <Typography variant="body2" sx={{ 
+                color: theme => theme.palette.info.main,
+                fontWeight: 'bold',
+                mt: 0.5
+              }}>
+                Teacher
+              </Typography>
+            )}
+            {isStudent && (
+              <Typography variant="body2" sx={{ 
+                color: theme => theme.palette.success.main,
+                fontWeight: 'bold',
+                mt: 0.5
+              }}>
+                Student
               </Typography>
             )}
           </Box>
