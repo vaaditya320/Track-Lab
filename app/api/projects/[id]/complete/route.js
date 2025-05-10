@@ -16,7 +16,8 @@ const FOLDER_NAME = "tracklab-project-pics/";
 
 export async function POST(req, { params }) {
   try {
-    const projectId = await params.id;
+    const resolvedParams = await params;
+    const projectId = resolvedParams.id;
     if (!projectId) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
     }

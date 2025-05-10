@@ -5,7 +5,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(req, { params }) {
   try {
-    const { id } = params;
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
 
     if (!id) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
@@ -29,16 +30,15 @@ export async function GET(req, { params }) {
 
 export async function DELETE(req, { params }) {
   try {
-    const session = await getServerSession(authOptions); // Remove `req` argument
-
+    const session = await getServerSession(authOptions);
 
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
-
-    const { id } = params;
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
 
     if (!id) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
