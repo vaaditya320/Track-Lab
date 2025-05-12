@@ -41,6 +41,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import Brightness4Icon from '@mui/icons-material/Brightness4'; // Moon icon for dark mode
 import Brightness7Icon from '@mui/icons-material/Brightness7'; // Sun icon for light mode
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { ThemeProvider } from "@mui/material/styles";
 import { createAppTheme } from "./theme/trackLabTheme"; // Import the theme creator function
 import "./globals.css";
@@ -50,6 +51,7 @@ import GoogleAnalytics from "@/utils/GoogleAnalytics";
 const navLinks = [
   { title: "Dashboard", path: "/", icon: <DashboardIcon /> },
   { title: "Create New", path: "/projects/create", icon: <AddCircleOutlineIcon /> },
+  { title: "Achievements", path: "/achievements", icon: <EmojiEventsIcon /> },
 ];
 
 // Admin panel link - Will only show to admin users

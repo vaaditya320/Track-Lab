@@ -20,6 +20,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InfoIcon from '@mui/icons-material/Info';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
@@ -637,6 +638,7 @@ export default function AdminPage() {
                 </Button>
               </Tooltip>
             )}
+            
             <Button
               variant="contained"
               color="info"
@@ -653,6 +655,24 @@ export default function AdminPage() {
               }}
             >
               System Logs
+            </Button>
+
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={() => router.push('/admin/achievements')}
+              fullWidth={isMobile}
+              startIcon={<EmojiEventsIcon />}
+              sx={{
+                background: "linear-gradient(45deg, #FF9800 0%, #F57C00 100%)",
+                boxShadow: "0 4px 20px rgba(255, 152, 0, 0.3)",
+                '&:hover': {
+                  background: "linear-gradient(45deg, #F57C00 0%, #EF6C00 100%)",
+                  boxShadow: "0 6px 25px rgba(255, 152, 0, 0.4)",
+                }
+              }}
+            >
+              Achievements
             </Button>
           </Box>
         </Box>
