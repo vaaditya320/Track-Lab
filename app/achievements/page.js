@@ -310,13 +310,8 @@ export default function AchievementsPage() {
             transition={{ duration: 0.4 }}
           >
             <Box sx={{ textAlign: 'center', py: { xs: 4, md: 8 } }}>
-              <img
-                src="https://cdn.jsdelivr.net/gh/duyet/illustrations@main/undraw/undraw_winners_ao2o.svg"
-                alt="No achievements"
-                style={{ maxWidth: 220, marginBottom: 24 }}
-              />
               <Typography variant="h6" color="text.secondary" fontWeight={600}>
-                No achievements found.
+                No achievements yet.
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Try adjusting your filters or check back later!
