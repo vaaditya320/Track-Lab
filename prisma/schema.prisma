@@ -18,6 +18,7 @@ model User {
   batch           Batch?    // New enum field for batch
   projects        Project[] @relation("ProjectLeader") // The relation to projects as leader
   assignedProjects Project[] @relation("ProjectAdmin") // The relation to projects as admin
+  achievements    Achievement[]
 }
 
 model Project {
@@ -37,6 +38,18 @@ model Project {
 model Student {
   name   String // Student name
   regId  String @id @unique // Registration ID as primary key
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String?
+  type        String   // "STUDENT" or "FACULTY"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
 }
 
 enum Status {
