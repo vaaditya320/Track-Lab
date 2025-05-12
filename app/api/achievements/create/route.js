@@ -47,7 +47,8 @@ export async function POST(req) {
     let imageUrl = null;
     if (file && file.name) {
       const fileExtension = file.name.split('.').pop();
-      const uniqueName = `${user.regId}-${Date.now()}.${fileExtension}`;
+      const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const uniqueName = `${user.regId}-${sanitizedTitle}.${fileExtension}`;
       const s3Key = `${FOLDER_NAME}${uniqueName}`;
       const uploadParams = {
         Bucket: BUCKET_NAME,
