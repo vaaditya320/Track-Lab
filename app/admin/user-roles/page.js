@@ -78,6 +78,16 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
 
   const getRoleBadgeStyles = (role) => {
     const colors = {
+      SUPER_ADMIN: {
+        light: {
+          bg: "rgba(255, 215, 0, 0.15)",
+          text: "#FFD700"
+        },
+        dark: {
+          bg: "rgba(255, 215, 0, 0.25)",
+          text: "#FFE44D"
+        }
+      },
       ADMIN: {
         light: {
           bg: "rgba(255, 99, 132, 0.15)",
@@ -171,7 +181,45 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
         </Box>
       </DialogContent>
       <DialogActions sx={{ flexDirection: 'column', gap: 1, p: 2 }}>
-        {user.role === "STUDENT" ? (
+        {user.role === "SUPER_ADMIN" ? (
+          <Box sx={{ 
+            width: '100%',
+            p: 2,
+            borderRadius: 2,
+            background: theme.palette.mode === 'dark' 
+              ? 'linear-gradient(45deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05))'
+              : 'linear-gradient(45deg, rgba(255,215,0,0.15), rgba(255,215,0,0.08))',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.4)'}`,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 0 20px rgba(255,215,0,0.1)'
+              : '0 0 20px rgba(255,215,0,0.15)'
+          }}>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: theme.palette.mode === 'dark' ? '#FFE44D' : '#FFD700',
+                fontStyle: 'italic',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                mb: 1
+              }}
+            >
+              ⭐ Supreme Authority
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: theme.palette.mode === 'dark' ? 'rgba(255,228,77,0.8)' : 'rgba(255,215,0,0.8)',
+                textAlign: 'center',
+                fontStyle: 'italic'
+              }}
+            >
+              This role represents the highest level of authority in the system and cannot be modified
+            </Typography>
+          </Box>
+        ) : user.role === "STUDENT" ? (
           <Button
             variant="contained"
             color="primary"
@@ -548,6 +596,16 @@ export default function AdminUsersPage() {
   // Get role badge color based on role and theme
   const getRoleBadgeStyles = (role) => {
     const colors = {
+      SUPER_ADMIN: {
+        light: {
+          bg: "rgba(255, 215, 0, 0.15)",
+          text: "#FFD700"
+        },
+        dark: {
+          bg: "rgba(255, 215, 0, 0.25)",
+          text: "#FFE44D"
+        }
+      },
       ADMIN: {
         light: {
           bg: "rgba(255, 99, 132, 0.15)",
@@ -718,7 +776,37 @@ export default function AdminUsersPage() {
                         </TableCell>
                         {!isMobile && (
                           <TableCell align="center">
-                            {user.role === "STUDENT" ? (
+                            {user.role === "SUPER_ADMIN" ? (
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 1,
+                                px: 2,
+                                py: 1,
+                                borderRadius: 1,
+                                background: theme.palette.mode === 'dark' 
+                                  ? 'linear-gradient(45deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05))'
+                                  : 'linear-gradient(45deg, rgba(255,215,0,0.15), rgba(255,215,0,0.08))',
+                                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.4)'}`,
+                                boxShadow: theme.palette.mode === 'dark'
+                                  ? '0 0 15px rgba(255,215,0,0.1)'
+                                  : '0 0 15px rgba(255,215,0,0.15)'
+                              }}>
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    color: theme.palette.mode === 'dark' ? '#FFE44D' : '#FFD700',
+                                    fontStyle: 'italic',
+                                    fontWeight: 'bold',
+                                    letterSpacing: '0.5px',
+                                    textTransform: 'uppercase',
+                                    fontSize: '0.85rem'
+                                  }}
+                                >
+                                  ⭐ Supreme Authority
+                                </Typography>
+                              </Box>
+                            ) : user.role === "STUDENT" ? (
                               <Button
                                 variant="contained"
                                 color="success"

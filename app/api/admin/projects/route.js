@@ -2,24 +2,13 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { logAdminAction, LogType } from "@/lib/logger";
-
-// Admin check middleware
-async function isAdmin(session) {
-  if (!session || !session.user || !session.user.email) return false;
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { role: true },
-  });
-
-  return user?.role === "ADMIN";
-}
+import { isAdmin } from "@/lib/isAdmin";
 
 // GET all projects
 export async function GET(req) {
   const session = await getServerSession(authOptions);
 
-  if (!(await isAdmin(session))) {
+  if (!isAdmin(session)) {
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
   }
 
@@ -63,7 +52,7 @@ export async function GET(req) {
 // POST create a new project
 export async function POST(req) {
   const session = await getServerSession(authOptions);
-  if (!(await isAdmin(session))) {
+  if (!isAdmin(session)) {
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
   }
 
@@ -107,7 +96,7 @@ export async function POST(req) {
 // PUT update an existing project
 export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions);
-  if (!(await isAdmin(session))) {
+  if (!isAdmin(session)) {
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
   }
 
@@ -151,7 +140,7 @@ export async function PUT(req, { params }) {
 // DELETE remove a project
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions);
-  if (!(await isAdmin(session))) {
+  if (!isAdmin(session)) {
     return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
   }
 

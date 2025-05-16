@@ -3,14 +3,15 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { logAdminAction, LogType } from "@/lib/logger";
+import { isSuperAdmin } from "@/lib/isSuperAdmin";
 
 // GET all users (admin only)
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Only the specified admin email can access
-    if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+    // Check if user is super admin
+    if (!session || !isSuperAdmin(session)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -48,8 +49,8 @@ export async function PUT(request) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Only the specified admin email can update roles
-    if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+    // Check if user is super admin
+    if (!session || !isSuperAdmin(session)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -64,7 +65,7 @@ export async function PUT(request) {
     }
 
     // Validate role
-    if (!["STUDENT", "TEACHER", "ADMIN"].includes(role)) {
+    if (!["STUDENT", "TEACHER", "ADMIN", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.json(
         { error: "Invalid role" },
         { status: 400 }
@@ -117,8 +118,8 @@ export async function PUT(request) {
 export async function DELETE(req) {
   const session = await getServerSession(authOptions);
 
-  // Only the specified admin email can delete users
-  if (!session || session.user.email !== "2023pietcsaaditya003@poornima.org") {
+  // Check if user is super admin
+  if (!session || !isSuperAdmin(session)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 

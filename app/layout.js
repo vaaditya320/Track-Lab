@@ -46,6 +46,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { createAppTheme } from "./theme/trackLabTheme"; // Import the theme creator function
 import "./globals.css";
 import GoogleAnalytics from "@/utils/GoogleAnalytics";
+import { isSuperAdmin } from "@/lib/isSuperAdmin";
 
 // Navigation links
 const navLinks = [
@@ -204,24 +205,24 @@ function NavigationHeader({ toggleThemeMode, mode }) {
   const isMobile = useMediaQuery((theme) => theme.breakpoints.down('md'));
   const pathname = usePathname();
   
-  // Check if the current user is an admin
+  // Check if the current user is an admin or super admin
   const isAdmin = session?.user?.role === "ADMIN";
+  const isSuperAdminUser = session?.user?.role === "SUPER_ADMIN" || session?.user?.email === "2023pietcsaaditya003@poornima.org";
   
   // Get links based on user role
   const getLinks = () => {
     if (status === "authenticated") {
-      const isSuperUser = session?.user?.email === "2023pietcsaaditya003@poornima.org";
       let links = [...navLinks];
       
       // First add role-based links
       if (session?.user?.role === "TEACHER") {
         links.push(assignedProjectsLink);
-      } else if (isAdmin) {
+      } else if (isAdmin || isSuperAdminUser) {
         links.push(logsLink);
       }
       
       // Then add superuser privileges if applicable
-      if (isSuperUser) {
+      if (isSuperAdminUser) {
         links.push(userRoleManagementLink);
       }
       
@@ -596,6 +597,7 @@ function UserAccount({ status, session }) {
   const isAdmin = session?.user?.role === "ADMIN";
   const isTeacher = session?.user?.role === "TEACHER";
   const isStudent = session?.user?.role === "STUDENT";
+  const isSuperAdminUser = session?.user?.role === "SUPER_ADMIN";
   const pathname = usePathname();
   
   const handleClick = (event) => {
@@ -618,18 +620,22 @@ function UserAccount({ status, session }) {
             aria-expanded={open ? 'true' : undefined}
             sx={{ 
               p: 0.5,
-              border: theme => `2px solid ${
-                isAdmin 
-                  ? theme.palette.secondary.light 
-                  : isTeacher 
-                    ? theme.palette.teacher.light
-                    : isStudent
-                      ? theme.palette.student.light
-                      : theme.palette.primary.contrastText
-              }`,
+              border: theme => isSuperAdminUser 
+                ? '2px solid #FFD700'
+                : `2px solid ${
+                    isAdmin 
+                      ? theme.palette.secondary.light 
+                      : isTeacher 
+                        ? theme.palette.teacher.light
+                        : isStudent
+                          ? theme.palette.student.light
+                          : theme.palette.primary.contrastText
+                  }`,
               transition: 'all 0.2s ease',
               '&:hover': { 
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                transform: isSuperAdminUser ? 'scale(1.02)' : 'none',
+                boxShadow: isSuperAdminUser ? '0 0 12px rgba(255, 215, 0, 0.3)' : 'none'
               }
             }}
           >
@@ -638,22 +644,26 @@ function UserAccount({ status, session }) {
                 width: 32, 
                 height: 32,
                 bgcolor: theme => 
-                  isAdmin 
-                    ? theme.palette.secondary.light 
-                    : isTeacher 
-                      ? theme.palette.teacher.light
-                      : isStudent
-                        ? theme.palette.student.light
-                        : theme.palette.primary.contrastText,
+                  isSuperAdminUser
+                    ? '#FFD700'
+                    : isAdmin 
+                      ? theme.palette.secondary.light 
+                      : isTeacher 
+                        ? theme.palette.teacher.light
+                        : isStudent
+                          ? theme.palette.student.light
+                          : theme.palette.primary.contrastText,
                 color: theme => 
-                  isAdmin 
-                    ? theme.palette.secondary.contrastText 
-                    : isTeacher 
-                      ? theme.palette.teacher.contrastText
-                      : isStudent
-                        ? theme.palette.student.contrastText
-                        : theme.palette.primary.main,
-                fontWeight: 'bold',
+                  isSuperAdminUser
+                    ? '#000000'
+                    : isAdmin 
+                      ? theme.palette.secondary.contrastText 
+                      : isTeacher 
+                        ? theme.palette.teacher.contrastText
+                        : isStudent
+                          ? theme.palette.student.contrastText
+                          : theme.palette.primary.main,
+                fontWeight: 'bold'
               }}
             >
               {session?.user?.name?.charAt(0) || "U"}
@@ -689,7 +699,16 @@ function UserAccount({ status, session }) {
             }}>
               {session?.user?.email}
             </Typography>
-            {isAdmin && (
+            {isSuperAdminUser && (
+              <Typography variant="body2" sx={{ 
+                color: '#FFD700',
+                fontWeight: 'bold',
+                mt: 0.5
+              }}>
+                Super Admin
+              </Typography>
+            )}
+            {isAdmin && !isSuperAdminUser && (
               <Typography variant="body2" sx={{ 
                 color: theme => theme.palette.secondary.main,
                 fontWeight: 'bold',
@@ -731,7 +750,7 @@ function UserAccount({ status, session }) {
             <Typography color="primary">Profile</Typography>
           </MenuItem>
           {/* Admin Panel link in dropdown for admin users */}
-          {isAdmin && (
+          {(isAdmin || isSuperAdminUser) && (
             <MenuItem 
               component={Link} 
               href="/admin" 

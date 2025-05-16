@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { CloudWatchLogsClient, GetLogEventsCommand } from "@aws-sdk/client-cloudwatch-logs";
+import { isAdmin } from "@/lib/isAdmin";
 
 // Use the same log group name as in lib/logger.js
 const LOG_GROUP_NAME = 'Tracklab';
@@ -10,7 +11,7 @@ const LOG_STREAM_NAME = 'Admin Actions';
 export async function GET() {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!isAdmin(session)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

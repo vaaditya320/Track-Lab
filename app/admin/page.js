@@ -21,6 +21,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import InfoIcon from '@mui/icons-material/Info';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import { isSuperAdmin } from "@/lib/isSuperAdmin";
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
@@ -388,7 +389,7 @@ export default function AdminPage() {
   const [longPressTimer, setLongPressTimer] = useState(null);
 
   // Check if user has special access
-  const hasSpecialAccess = session?.user?.email === "2023pietcsaaditya003@poornima.org";
+  const hasSpecialAccess = isSuperAdmin(session);
 
   useEffect(() => {
     // Only proceed when authentication status is determined

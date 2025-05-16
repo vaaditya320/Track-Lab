@@ -2,24 +2,12 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { logAdminAction, LogType } from "@/lib/logger";
+import { isAdmin } from "@/lib/isAdmin";
 import { NextResponse } from "next/server";
-
-async function isAdmin(session) {
-  if (!session || !session.user || !session.user.email) return false;
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { role: true },
-  });
-
-  return user?.role === "ADMIN";
-}
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
-
-  // Admin check: Only admin user can access
-  if (!(await isAdmin(session))) {
+  if (!isAdmin(session)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
@@ -47,9 +35,7 @@ export async function GET(req, { params }) {
 
 export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions);
-
-  // Admin check: Only admin user can access
-  if (!(await isAdmin(session))) {
+  if (!isAdmin(session)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
@@ -92,9 +78,7 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions);
-
-  // Admin check: Only admin user can access
-  if (!(await isAdmin(session))) {
+  if (!isAdmin(session)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
