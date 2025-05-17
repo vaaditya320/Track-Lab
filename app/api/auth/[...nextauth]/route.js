@@ -73,7 +73,7 @@ export const authOptions = {
   },
 
   session: {
-    maxAge: 24 * 60 * 60, // Set session timeout to 1 day
+    maxAge: 604800
   },
 
   secret: process.env.NEXTAUTH_SECRET,

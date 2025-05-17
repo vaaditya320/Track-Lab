@@ -79,262 +79,395 @@ async function generateAndUploadPDF(project, leaderName) {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    // Theme color - using proper rgb function from PDF-lib
+    // Theme color and style
     const themeColor = rgb(54/255, 78/255, 210/255);
+    const lightThemeColor = rgb(0.95, 0.95, 1);
+    const accentColor = rgb(0.8, 0.87, 1);
+    const headerGradient = themeColor;
+    const marginX = 50;
+    const marginY = 40;
+    const sectionTitleBoxColor = rgb(0.92, 0.96, 1);
+    const sectionTitleBorderColor = themeColor;
+    const sectionTitleTextColor = themeColor;
+    const sectionTitleShadow = rgb(0.8, 0.85, 1);
     
-    // Header with theme color background
+    // Header with theme color background and shadow
     page.drawRectangle({
       x: 0,
-      y: height - 100,
+      y: height - 90,
       width: width,
-      height: 100,
-      color: themeColor
+      height: 90,
+      color: headerGradient
     });
-    
+    // Decorative shadow under header
+    page.drawRectangle({
+      x: 0,
+      y: height - 92,
+      width: width,
+      height: 4,
+      color: rgb(0.7, 0.7, 0.9)
+    });
     // Title text in white on the theme background
     page.drawText("PROJECT REPORT", {
-      x: 50,
-      y: height - 60,
-      size: 28,
+      x: marginX,
+      y: height - 50,
+      size: 30,
       font: boldFont,
-      color: rgb(1, 1, 1) // White
+      color: rgb(1, 1, 1)
     });
-    
-    let textY = height - 120;
-    
+    let textY = height - 120; // Move content upwards for better fit
+    // Section Title Helper (subtle underline, no box, bold theme color, larger font)
+    function drawSectionTitle(title, y) {
+      const titleFontSize = 16;
+      const underlineWidth = 120;
+      // Title
+      page.drawText(title, {
+        x: marginX,
+        y: y,
+        size: titleFontSize,
+        font: boldFont,
+        color: sectionTitleTextColor
+      });
+      // Underline with a small gap below the text
+      page.drawRectangle({
+        x: marginX,
+        y: y - 4, // 4px gap below the text baseline
+        width: underlineWidth,
+        height: 2,
+        color: sectionTitleTextColor
+      });
+    }
     // Project Title
-    page.drawText("Project Title:", {
-      x: 50,
-      y: textY,
-      size: 14,
-      font: boldFont,
-      color: themeColor
+    drawSectionTitle("Project Title", textY);
+    textY -= 22;
+    // Draw Project Title in a box
+    const titleText = project.title || "Untitled Project";
+    const titleTextWidth = font.widthOfTextAtSize(titleText, 15);
+    const titleBoxPaddingX = 18;
+    const titleBoxHeight = 36;
+    const titleBoxWidth = titleTextWidth + 2 * titleBoxPaddingX;
+    const titleBoxX = marginX;
+    const titleBoxY = textY - titleBoxHeight;
+    // Lighter shadow
+    page.drawRectangle({
+      x: titleBoxX + 1,
+      y: titleBoxY - 1,
+      width: titleBoxWidth,
+      height: titleBoxHeight,
+      color: rgb(0.93, 0.95, 1),
+      borderRadius: 6
     });
-    
-    textY -= 25;
-    page.drawText(project.title || "Untitled Project", {
-      x: 70,
-      y: textY,
-      size: 16,
+    // Lighter box
+    page.drawRectangle({
+      x: titleBoxX,
+      y: titleBoxY,
+      width: titleBoxWidth,
+      height: titleBoxHeight,
+      borderColor: themeColor,
+      borderWidth: 0.7,
+      color: rgb(0.98, 0.99, 1),
+      borderRadius: 6
+    });
+    // Draw title text centered
+    page.drawText(titleText, {
+      x: titleBoxX + titleBoxPaddingX,
+      y: titleBoxY + titleBoxHeight / 2 - 6,
+      size: 15,
       font: font,
-      color: rgb(0, 0, 0)
+      color: rgb(0.1, 0.1, 0.1)
     });
-    
-    // Leader Name
-    textY -= 35;
-    page.drawText("Project Leader:", {
-      x: 50,
-      y: textY,
-      size: 14,
-      font: boldFont,
-      color: themeColor
+    textY -= titleBoxHeight + 32; // Space after title box
+    // Project Leader
+    drawSectionTitle("Project Leader", textY);
+    textY -= 22;
+    // Draw Project Leader in a box
+    const leaderText = project.leader?.name || leaderName || "Unknown Leader";
+    const leaderTextWidth = font.widthOfTextAtSize(leaderText, 15);
+    const leaderBoxPaddingX = 18;
+    const leaderBoxHeight = 36;
+    const leaderBoxWidth = leaderTextWidth + 2 * leaderBoxPaddingX;
+    const leaderBoxX = marginX;
+    const leaderBoxY = textY - leaderBoxHeight;
+    // Lighter shadow
+    page.drawRectangle({
+      x: leaderBoxX + 1,
+      y: leaderBoxY - 1,
+      width: leaderBoxWidth,
+      height: leaderBoxHeight,
+      color: rgb(0.93, 0.95, 1),
+      borderRadius: 6
     });
-    
-    textY -= 25;
-    page.drawText(project.leader?.name || leaderName || "Unknown Leader", {
-      x: 70,
-      y: textY,
-      size: 14,
+    // Lighter box
+    page.drawRectangle({
+      x: leaderBoxX,
+      y: leaderBoxY,
+      width: leaderBoxWidth,
+      height: leaderBoxHeight,
+      borderColor: themeColor,
+      borderWidth: 0.7,
+      color: rgb(0.98, 0.99, 1),
+      borderRadius: 6
+    });
+    // Draw leader text centered
+    page.drawText(leaderText, {
+      x: leaderBoxX + leaderBoxPaddingX,
+      y: leaderBoxY + leaderBoxHeight / 2 - 6,
+      size: 15,
       font: font,
-      color: rgb(0, 0, 0)
+      color: rgb(0.1, 0.1, 0.1)
     });
-    
-    // Team Members in separate boxes
-    textY -= 35;
-    page.drawText("Team Members:", {
-      x: 50,
-      y: textY,
-      size: 14,
-      font: boldFont,
-      color: themeColor
-    });
-    
-    textY -= 25;
-    
-    // Parse team members with error handling
+    textY -= leaderBoxHeight + 32; // Space after leader box
+    // Team Members
+    drawSectionTitle("Team Members", textY);
+    textY -= 22;
+    // Parse team members
     let teamMembers = [];
     try {
       if (project.teamMembers) {
         teamMembers = JSON.parse(project.teamMembers);
       }
     } catch (error) {
-      console.error("Error parsing team members:", error);
       teamMembers = project.teamMembers ? [project.teamMembers] : ["No team members specified"];
     }
-    
-    // Configuration for team member boxes
-    const boxHeight = 30;
-    const boxWidth = 150;
-    const boxesPerRow = 2; // Reduced from 3 to 2 for longer names
-    const margin = 20;
-    
-    for (let i = 0; i < teamMembers.length; i++) {
-      const row = Math.floor(i / boxesPerRow);
-      const col = i % boxesPerRow;
-      
-      const boxX = 50 + col * (boxWidth + margin);
-      const boxY = textY - row * (boxHeight + 10);
-      
-      // Draw box with theme color outline
-      page.drawRectangle({
-        x: boxX,
-        y: boxY - boxHeight,
-        width: boxWidth,
-        height: boxHeight,
-        borderColor: themeColor,
-        borderWidth: 1,
-        color: rgb(0.95, 0.95, 1) // Very light blue background
-      });
-      
-      // Draw member name in the box with text truncation if needed
-      const memberName = teamMembers[i] || "";
-      let displayName = memberName;
-      const maxWidth = boxWidth - 20;
-      
-      // Check if name needs truncation
-      if (font.widthOfTextAtSize(memberName, 12) > maxWidth) {
-        // Try to fit first name and ID number
-        const parts = memberName.split(' ');
-        if (parts.length > 1) {
-          // Get first name and ID if available
-          let truncated = parts[0];
-          const lastPart = parts[parts.length - 1];
-          if (lastPart.includes("PIET")) {
-            truncated += " " + lastPart;
-          }
-          
-          // Check if truncated version still fits
-          if (font.widthOfTextAtSize(truncated, 12) > maxWidth) {
-            // Just truncate with ellipsis if still too long
-            for (let j = 1; j <= memberName.length; j++) {
-              const testText = memberName.substring(0, j) + "...";
-              if (font.widthOfTextAtSize(testText, 12) > maxWidth) {
-                displayName = memberName.substring(0, j - 1) + "...";
-                break;
-              }
-            }
-          } else {
-            displayName = truncated;
-          }
-        } else {
-          // Single word name that's too long, just truncate
-          for (let j = 1; j <= memberName.length; j++) {
-            const testText = memberName.substring(0, j) + "...";
-            if (font.widthOfTextAtSize(testText, 12) > maxWidth) {
-              displayName = memberName.substring(0, j - 1) + "...";
-              break;
-            }
-          }
+    // Arrange team members in a 3-row by 2-column grid (fill with empty boxes if fewer than 6)
+    const maxMembers = 6;
+    const gridRows = 3;
+    const gridCols = 2;
+    const memberBoxes = [...teamMembers];
+    while (memberBoxes.length < maxMembers) memberBoxes.push("");
+    let gridBoxWidth = 220;
+    let gridBoxHeight = 32;
+    let gridBoxPaddingX = 14;
+    let gridBoxSpacingX = 24;
+    let gridBoxSpacingY = 18;
+    let gridStartX = marginX;
+    let gridStartY = textY;
+    for (let row = 0; row < gridRows; row++) {
+      for (let col = 0; col < gridCols; col++) {
+        const idx = row * gridCols + col;
+        const name = memberBoxes[idx] || "";
+        const boxX = gridStartX + col * (gridBoxWidth + gridBoxSpacingX);
+        const boxY = gridStartY - row * (gridBoxHeight + gridBoxSpacingY);
+        // Lighter shadow
+        page.drawRectangle({
+          x: boxX + 1,
+          y: boxY - gridBoxHeight - 1,
+          width: gridBoxWidth,
+          height: gridBoxHeight,
+          color: rgb(0.93, 0.95, 1),
+          borderRadius: 6
+        });
+        // Lighter box
+        page.drawRectangle({
+          x: boxX,
+          y: boxY - gridBoxHeight,
+          width: gridBoxWidth,
+          height: gridBoxHeight,
+          borderColor: themeColor,
+          borderWidth: 0.7,
+          color: rgb(0.98, 0.99, 1),
+          borderRadius: 6
+        });
+        // Draw name (if present)
+        if (name) {
+          page.drawText(name, {
+            x: boxX + gridBoxPaddingX,
+            y: boxY - gridBoxHeight / 2 - 5,
+            size: 13,
+            font: font,
+            color: rgb(0.1, 0.1, 0.1)
+          });
         }
       }
-      
-      page.drawText(displayName, {
-        x: boxX + 10,
-        y: boxY - boxHeight/2 - 6,
-        size: 12,
-        font: font,
-        color: rgb(0, 0, 0),
-        maxWidth: boxWidth - 20
-      });
     }
-    
-    // Calculate new Y position after team member boxes
-    const rowsNeeded = Math.ceil(teamMembers.length / boxesPerRow);
-    textY -= (rowsNeeded * (boxHeight + 10) + 20);
-    
+    // Move Y below last row
+    textY = gridStartY - gridRows * (gridBoxHeight + gridBoxSpacingY) - 8;
+    textY -= 30; // Reduced space before Project Status
     // Project Status
-    page.drawText("Project Status:", {
-      x: 50,
-      y: textY,
-      size: 14,
-      font: boldFont,
-      color: themeColor
-    });
-    
-    textY -= 25;
-    
-    // Status box with color based on status
-    let statusColor = rgb(0.5, 0.5, 0.5); // Default gray
+    drawSectionTitle("Project Status", textY);
+    textY -= 26;
+    // Status pill: rounded, outlined, theme color border and text, centered
+    let statusColor = sectionTitleTextColor;
     const status = project.status || "UNKNOWN";
-    
-    if (status === "SUBMITTED") {
-      statusColor = rgb(0, 0.7, 0); // Green for submitted
-    } else if (status === "PARTIAL") {
-      statusColor = rgb(1, 0.7, 0); // Orange for partial
-    }
-    
-    // Draw status box
+    const pillWidth = 120;
+    const pillHeight = 32;
+    const pillX = marginX;
+    const pillY = textY - pillHeight;
     page.drawRectangle({
-      x: 70,
-      y: textY - 25,
-      width: 120,
-      height: 30,
-      color: statusColor,
-      borderWidth: 0
+      x: pillX,
+      y: pillY,
+      width: pillWidth,
+      height: pillHeight,
+      borderColor: statusColor,
+      borderWidth: 2,
+      color: rgb(1, 1, 1),
+      borderRadius: 16
     });
-    
-    // Draw status text
     page.drawText(status, {
-      x: 80,
-      y: textY - 10,
-      size: 14,
+      x: pillX + (pillWidth - font.widthOfTextAtSize(status, 15)) / 2,
+      y: pillY + (pillHeight - 15) / 2 + 2,
+      size: 15,
       font: boldFont,
-      color: rgb(1, 1, 1) // White text
+      color: statusColor
     });
-    
-    textY -= 50;
-    
+    textY -= 56; // Reduced space before Components
     // Components
-    page.drawText("Components:", {
-      x: 50,
-      y: textY,
-      size: 14,
-      font: boldFont,
+    drawSectionTitle("Components", textY);
+    textY -= 18;
+    // Components box with all components, word wrap, multi-column (max 3 columns, up to 30 items)
+    const components = (project.components || "").split(',').map(c => c.trim()).filter(Boolean);
+    const compBoxX = marginX;
+    const compBoxY = textY;
+    const compBoxWidth = width - 2 * marginX;
+    const compBoxHeight = 188.4;
+    // Shadow
+    page.drawRectangle({
+      x: compBoxX + 2,
+      y: compBoxY - compBoxHeight - 2,
+      width: compBoxWidth,
+      height: compBoxHeight,
+      color: rgb(0.85, 0.85, 0.95),
+      borderRadius: 12
+    });
+    // Box
+    page.drawRectangle({
+      x: compBoxX,
+      y: compBoxY - compBoxHeight,
+      width: compBoxWidth,
+      height: compBoxHeight,
+      borderColor: themeColor,
+      borderWidth: 1.5,
+      color: lightThemeColor,
+      borderRadius: 12
+    });
+    // List components inside box, up to 3 columns, all visible
+    const maxCols = 3;
+    const colCount = Math.min(maxCols, Math.ceil(components.length / 10));
+    const colWidth = (compBoxWidth - 30) / colCount;
+    const rowHeightComp = 18;
+    const maxRows = Math.ceil(components.length / colCount);
+    for (let col = 0; col < colCount; col++) {
+      let y = compBoxY - 22;
+      let x = compBoxX + 15 + col * colWidth;
+      for (let i = 0; i < maxRows; i++) {
+        const idx = col * maxRows + i;
+        if (idx >= components.length) break;
+        const comp = components[idx];
+        page.drawText("•", {
+          x: x,
+          y: y,
+          size: 12,
+          font: boldFont,
+          color: themeColor
+        });
+        page.drawText(comp, {
+          x: x + 15,
+          y: y,
+          size: 12,
+          font: font,
+          color: rgb(0.1, 0.1, 0.1)
+        });
+        y -= rowHeightComp;
+      }
+    }
+    // Footer
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width: width,
+      height: 30,
       color: themeColor
     });
-    
-    textY -= 25;
-    
-    // Draw components in a box
-    page.drawRectangle({
-      x: 50,
-      y: textY - 100, // Increased height for components
-      width: width - 100,
-      height: 100,
-      borderColor: themeColor,
-      borderWidth: 1,
-      color: rgb(0.95, 0.95, 1) // Very light blue background
+    page.drawText("Generated on: " + new Date().toLocaleDateString(), {
+      x: marginX,
+      y: 18,
+      size: 10,
+      font: font,
+      color: rgb(1, 1, 1)
     });
-    
-    // Draw components text with word wrapping and proper handling of newlines
-    const componentText = project.components || "No components specified";
-    // Split by newlines first
-    const lines = componentText.split(/\r?\n/);
-    let componentY = textY - 20;
-    const maxLineWidth = width - 120;
-    
-    for (const line of lines) {
-      // Now split the line by spaces for word wrapping
-      const words = line.split(' ');
+    // If status is SUBMITTED, add a second page (keep previous logic for summary and image, but with improved style if you want)
+    if (status === "SUBMITTED") {
+      const secondPage = pdfDoc.addPage([595, 842]);
+      
+      // Header for second page
+      secondPage.drawRectangle({
+        x: 0,
+        y: height - 80,
+        width: width,
+        height: 80,
+        color: themeColor
+      });
+      
+      secondPage.drawText("PROJECT SUMMARY", {
+        x: 50,
+        y: height - 45,
+        size: 24,
+        font: boldFont,
+        color: rgb(1, 1, 1)
+      });
+      
+      let secondPageY = height - 120;
+      
+      // Summary section
+      secondPage.drawText("Summary", {
+        x: 50,
+        y: secondPageY,
+        size: 16,
+        font: boldFont,
+        color: themeColor
+      });
+      
+      secondPage.drawRectangle({
+        x: 50,
+        y: secondPageY - 2,
+        width: 100,
+        height: 2,
+        color: themeColor
+      });
+      
+      secondPageY -= 30;
+      
+      // Draw summary box with shadow
+      secondPage.drawRectangle({
+        x: 50 + 2,
+        y: secondPageY - 200 - 2,
+        width: width - 100,
+        height: 200,
+        color: rgb(0.9, 0.9, 0.9)
+      });
+      
+      secondPage.drawRectangle({
+        x: 50,
+        y: secondPageY - 200,
+        width: width - 100,
+        height: 200,
+        borderColor: themeColor,
+        borderWidth: 1,
+        color: lightThemeColor
+      });
+      
+      // Draw summary text with word wrapping
+      const summaryText = project.summary || "No summary provided";
+      const words = summaryText.split(' ');
       let currentLine = '';
+      let summaryY = secondPageY - 20;
       
       for (const word of words) {
         const testLine = currentLine + (currentLine ? ' ' : '') + word;
         const testWidth = font.widthOfTextAtSize(testLine, 12);
         
-        if (testWidth > maxLineWidth) {
-          page.drawText(currentLine, {
+        if (testWidth > width - 120) {
+          secondPage.drawText(currentLine, {
             x: 60,
-            y: componentY,
+            y: summaryY,
             size: 12,
             font: font,
             color: rgb(0, 0, 0)
           });
           currentLine = word;
-          componentY -= 15;
+          summaryY -= 20;
           
-          // Check if we're going beyond the box
-          if (componentY < textY - 95) {
+          if (summaryY < secondPageY - 190) {
             currentLine += "...";
             break;
           }
@@ -344,167 +477,91 @@ async function generateAndUploadPDF(project, leaderName) {
       }
       
       if (currentLine) {
-        page.drawText(currentLine, {
+        secondPage.drawText(currentLine, {
           x: 60,
-          y: componentY,
+          y: summaryY,
           size: 12,
           font: font,
           color: rgb(0, 0, 0)
         });
-        componentY -= 15;
-        
-        // Check if we're going beyond the box
-        if (componentY < textY - 95) {
-          break;
+      }
+      
+      // Add project image if available
+      if (project.projectPhoto) {
+        try {
+          const { buffer: imageBuffer, contentType } = await fetchImageFromS3(project.projectPhoto);
+          let image;
+          if (contentType === "image/png") {
+            image = await pdfDoc.embedPng(imageBuffer);
+          } else if (contentType === "image/jpeg" || contentType === "image/jpg") {
+            image = await pdfDoc.embedJpg(imageBuffer);
+          }
+          
+          if (image) {
+            const maxImgWidth = width - 200;
+            const maxImgHeight = 200;
+            const imgDims = image.scaleToFit(maxImgWidth, maxImgHeight);
+            const imgX = (width - imgDims.width) / 2;
+            const imgY = 100;
+            
+            // Add image box with shadow
+            secondPage.drawRectangle({
+              x: imgX - 5 + 2,
+              y: imgY - 5 - 2,
+              width: imgDims.width + 10,
+              height: imgDims.height + 10,
+              color: rgb(0.9, 0.9, 0.9)
+            });
+            
+            secondPage.drawRectangle({
+              x: imgX - 5,
+              y: imgY - 5,
+              width: imgDims.width + 10,
+              height: imgDims.height + 10,
+              borderColor: themeColor,
+              borderWidth: 2,
+              color: rgb(1, 1, 1)
+            });
+            
+            secondPage.drawImage(image, {
+              x: imgX,
+              y: imgY,
+              width: imgDims.width,
+              height: imgDims.height
+            });
+          }
+        } catch (error) {
+          console.error("Error embedding image:", error);
         }
       }
-    }
-    
-    textY -= 120;
-    
-    // Summary (only if status is SUBMITTED)
-    if (status === "SUBMITTED") {
-      page.drawText("Project Summary:", {
-        x: 50,
-        y: textY,
-        size: 14,
-        font: boldFont,
+      
+      // Add footer to second page
+      secondPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: width,
+        height: 30,
         color: themeColor
       });
       
-      textY -= 25;
-      
-      // Draw summary in a box
-      page.drawRectangle({
-        x: 50,
-        y: textY - 100,
-        width: width - 100,
-        height: 100,
-        borderColor: themeColor,
-        borderWidth: 1,
-        color: rgb(0.95, 0.95, 1) // Very light blue background
+      secondPage.drawText("Page 2 of 2", {
+        x: width - 100,
+        y: 10,
+        size: 10,
+        font: font,
+        color: rgb(1, 1, 1)
       });
-      
-      // Draw summary text with word wrapping
-      const summaryText = project.summary || "No summary provided";
-      // Split by newlines first
-      const summaryLines = summaryText.split(/\r?\n/);
-      let summaryY = textY - 20;
-      
-      for (const line of summaryLines) {
-        // Now split the line by spaces for word wrapping
-        const words = line.split(' ');
-        let currentLine = '';
-        
-        for (const word of words) {
-          const testLine = currentLine + (currentLine ? ' ' : '') + word;
-          const testWidth = font.widthOfTextAtSize(testLine, 12);
-          
-          if (testWidth > maxLineWidth) {
-            page.drawText(currentLine, {
-              x: 60,
-              y: summaryY,
-              size: 12,
-              font: font,
-              color: rgb(0, 0, 0)
-            });
-            currentLine = word;
-            summaryY -= 15;
-            
-            // Check if we're going beyond the box
-            if (summaryY < textY - 95) {
-              currentLine += "...";
-              break;
-            }
-          } else {
-            currentLine = testLine;
-          }
-        }
-        
-        if (currentLine) {
-          page.drawText(currentLine, {
-            x: 60,
-            y: summaryY,
-            size: 12,
-            font: font,
-            color: rgb(0, 0, 0)
-          });
-          summaryY -= 15;
-          
-          // Check if we're going beyond the box
-          if (summaryY < textY - 95) {
-            break;
-          }
-        }
-      }
-      
-      textY -= 120;
     }
-    
-    // Add a decorative footer with theme color
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width: width,
-      height: 30,
-      color: themeColor
-    });
-    
-    // Embed Image if available (for SUBMITTED projects)
-    if (status === "SUBMITTED" && project.projectPhoto) {
-      try {
-        const { buffer: imageBuffer, contentType } = await fetchImageFromS3(project.projectPhoto);
-        let image;
-        if (contentType === "image/png") {
-          image = await pdfDoc.embedPng(imageBuffer);
-        } else if (contentType === "image/jpeg" || contentType === "image/jpg") {
-          image = await pdfDoc.embedJpg(imageBuffer);
-        }
-        
-        if (image) {
-          const maxImgWidth = width - 200;
-          const maxImgHeight = 150;
-          const imgDims = image.scaleToFit(maxImgWidth, maxImgHeight);
-          const imgX = (width - imgDims.width) / 2;
-          const imgY = 50;
-          
-          // Add a border around the image
-          page.drawRectangle({
-            x: imgX - 5,
-            y: imgY - 5,
-            width: imgDims.width + 10,
-            height: imgDims.height + 10,
-            borderColor: themeColor,
-            borderWidth: 2,
-            color: rgb(1, 1, 1) // White background
-          });
-          
-          page.drawImage(image, {
-            x: imgX,
-            y: imgY,
-            width: imgDims.width,
-            height: imgDims.height
-          });
-        }
-      } catch (error) {
-        console.error("Error embedding image:", error);
-        // Continue execution, don't throw here
-      }
-    }
-    
     // Save PDF in memory and upload to S3
     const pdfBytes = await pdfDoc.save();
     const s3Key = `${FOLDER_NAME}${leaderName.replace(/\s+/g, "_")}-${project.status}-project-${project.id}.pdf`;
-    
     const uploadParams = {
       Bucket: BUCKET_NAME,
       Key: s3Key,
       Body: Buffer.from(pdfBytes),
       ContentType: "application/pdf",
     };
-    
     await s3.send(new PutObjectCommand(uploadParams));
-    
     return s3Key;
   } catch (error) {
     console.error("Error generating and uploading PDF:", error);
