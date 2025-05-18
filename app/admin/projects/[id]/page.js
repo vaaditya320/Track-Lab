@@ -226,25 +226,6 @@ export default function ProjectDetails() {
             bgcolor: theme.palette.background.paper
           }}
         >
-          {project.projectPhoto && (
-            <Box 
-              sx={{ 
-                height: "200px", 
-                overflow: "hidden", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center",
-                bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100]
-              }}
-            >
-              <img 
-                src={project.projectPhoto} 
-                alt="Project" 
-                style={{ width: "100%", objectFit: "cover", objectPosition: "center" }} 
-              />
-            </Box>
-          )}
-          
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -260,7 +241,9 @@ export default function ProjectDetails() {
             
             <Divider sx={{ my: 3 }} />
             
+            {/* Main Info Grid */}
             <Grid container spacing={4}>
+              {/* Left Column: Team Leader and Project Timeline */}
               <Grid item xs={12} md={6}>
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -283,6 +266,37 @@ export default function ProjectDetails() {
                   </Paper>
                 </Box>
                 
+                {/* Project Image Box - Moved to Left Column */}
+                {project.projectPhoto && project.status === "SUBMITTED" && (
+                  <Box 
+                    sx={{ 
+                      mt: 3, // Add some top margin below Team Leader
+                      width: '300px', // Set a larger fixed width
+                      height: '300px', // Set a larger fixed height for 1:1 ratio
+                      margin: '0 auto', // Center within the grid column
+                      overflow: 'hidden', 
+                      bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100],
+                      borderRadius: 2, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      padding: 1 // Keep padding around the image
+                    }}
+                  >
+                    <img 
+                      src={`/api/projects/${id}/image?key=${encodeURIComponent(project.projectPhoto)}`}
+                      alt="Project" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '100%', 
+                        width: 'auto', 
+                        height: 'auto', 
+                        objectFit: 'contain' 
+                      }} 
+                    />
+                  </Box>
+                )}
+
                 {project.createdAt && (
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -311,6 +325,7 @@ export default function ProjectDetails() {
                 )}
               </Grid>
               
+              {/* Right Column: Team Members and Project Image */}
               <Grid item xs={12} md={6}>
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -333,7 +348,12 @@ export default function ProjectDetails() {
                     )}
                   </Paper>
                 </Box>
-                
+              </Grid>
+            </Grid>
+
+            {/* Components Section - Full Width */}
+            <Grid container spacing={4} sx={{ mt: 0 }}> {/* mt: 0 to reduce space between grids */}
+              <Grid item xs={12}>
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                     <BuildIcon sx={{ mr: 1 }} /> Components
@@ -348,7 +368,7 @@ export default function ProjectDetails() {
                   >
                     <Grid container spacing={1}>
                       {project.components.split(',').map((component, index) => (
-                        <Grid item xs={4} key={index}>
+                        <Grid item xs={12} sm={6} md={4} key={index}> {/* Responsive 3-column grid for components */}
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Box 
                               component="span" 
@@ -372,8 +392,9 @@ export default function ProjectDetails() {
               </Grid>
             </Grid>
 
+            {/* Project Summary - Full Width */}
             {project.summary && (
-              <Box sx={{ mt: 3 }}>
+              <Box sx={{ mt: 1 }}> {/* Adjusted top margin */}
                 <Typography variant="h6" sx={{ mb: 1 }}>Project Summary</Typography>
                 <Paper 
                   elevation={1} 
