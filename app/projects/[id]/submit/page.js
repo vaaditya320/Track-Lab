@@ -45,6 +45,7 @@ export default function SubmitPage() {
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [progress, setProgress] = useState(100);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [wordCount, setWordCount] = useState(0);
 
   useEffect(() => {
     if (status === "authenticated" && projectId) {
@@ -74,6 +75,23 @@ export default function SubmitPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleSummaryChange = (e) => {
+    const text = e.target.value;
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+    const count = words.length;
+    setWordCount(count);
+    
+    if (count > 120) {
+      setToast({
+        open: true,
+        message: "Summary cannot exceed 120 words",
+        severity: "warning"
+      });
+    }
+    
+    setSummary(text);
   };
 
   const handleSubmit = async (event) => {
@@ -353,11 +371,18 @@ export default function SubmitPage() {
                     multiline
                     rows={5}
                     value={summary}
-                    onChange={(e) => setSummary(e.target.value)}
+                    onChange={handleSummaryChange}
                     required
                     placeholder="Describe what you've accomplished in this project, challenges faced, and solutions implemented..."
-                    sx={{ mb: 3 }}
+                    sx={{ mb: 1 }}
                   />
+                  <Typography 
+                    variant="body2" 
+                    color={wordCount > 120 ? "error" : "text.secondary"}
+                    sx={{ mb: 3, textAlign: 'right' }}
+                  >
+                    {wordCount}/120 words
+                  </Typography>
 
                   <Button
                     type="submit"
