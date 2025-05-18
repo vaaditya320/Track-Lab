@@ -346,7 +346,27 @@ export default function ProjectDetails() {
                       borderRadius: 2 
                     }}
                   >
-                    <Typography variant="body1">{project.components}</Typography>
+                    <Grid container spacing={1}>
+                      {project.components.split(',').map((component, index) => (
+                        <Grid item xs={4} key={index}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Box 
+                              component="span" 
+                              sx={{ 
+                                width: 6, 
+                                height: 6, 
+                                borderRadius: '50%', 
+                                bgcolor: 'primary.main',
+                                mr: 1
+                              }} 
+                            />
+                            <Typography variant="body2">
+                              {component.trim()}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
                   </Paper>
                 </Box>
               </Grid>
