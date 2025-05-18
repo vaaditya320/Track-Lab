@@ -33,6 +33,8 @@ import {
   ListItemText,
   ClickAwayListener,
   Popper,
+  Autocomplete,
+  Chip,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -399,13 +401,14 @@ export default function CreateProject() {
   const [title, setTitle] = useState("");
   const [numMembers, setNumMembers] = useState(1);
   const [teamMembers, setTeamMembers] = useState([]);
-  const [borrowedComponents, setBorrowedComponents] = useState("");
+  const [components, setComponents] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [progress, setProgress] = useState(100);
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState(null);
+  const [inputString, setInputString] = useState('');
 
   useEffect(() => {
     setTeamMembers(Array(numMembers).fill(""));
@@ -434,7 +437,7 @@ export default function CreateProject() {
 
     // Trim whitespace from all inputs
     const trimmedTitle = title.trim();
-    const trimmedComponents = borrowedComponents.trim();
+    const trimmedComponents = components.join(", ");
     const trimmedTeamMembers = teamMembers.map(member => member.trim());
 
     // Check if any required field is empty
@@ -443,8 +446,8 @@ export default function CreateProject() {
       return;
     }
 
-    if (!trimmedComponents) {
-      setToast({ open: true, message: "Borrowed components information is required.", severity: "error" });
+    if (components.length === 0) {
+      setToast({ open: true, message: "At least one component is required.", severity: "error" });
       return;
     }
 
@@ -810,20 +813,116 @@ export default function CreateProject() {
                   </Grid>
 
                   <Grid item xs={12}>
-                    <TextField
-                      label="Borrowed Components"
-                      variant="outlined"
-                      fullWidth
-                      multiline
-                      rows={4}
-                      value={borrowedComponents}
-                      onChange={(e) => setBorrowedComponents(e.target.value)}
-                      required
-                      InputProps={{
-                        startAdornment: <ExtensionIcon sx={{ mr: 1, color: 'text.secondary', alignSelf: 'flex-start', mt: 1 }} />,
+                    <Autocomplete
+                      multiple
+                      id="components-input"
+                      options={[]}
+                      freeSolo
+                      value={components}
+                      onChange={(event, newValue) => {
+                        // Filter out any empty strings that might result from extra commas
+                        const filteredNewValue = newValue.filter(item => item.trim() !== '');
+
+                        // Limit the number of chips to 30
+                        if (filteredNewValue.length > 30) {
+                          setToast({
+                            open: true,
+                            message: `You can add a maximum of 30 components. ${components.length} already added.`, // Adjust message as needed
+                            severity: "warning"
+                          });
+                          setComponents(filteredNewValue.slice(0, 30)); // Only keep the first 30
+                        } else {
+                          setComponents(filteredNewValue);
+                        }
                       }}
-                      placeholder="List all the hardware components you borrowed for this project e.g. Arduino, Raspberry Pi, etc."
+                      inputValue={inputString} // Control input value with state
+                      onInputChange={(event, newInputValue) => {
+                        setInputString(newInputValue);
+                        // Handle comma-separated input
+                        if (newInputValue.includes(',')) {
+                          const newItems = newInputValue.split(',')
+                            .map(item => item.trim())
+                            .filter(item => item && !components.includes(item)); // Filter out empty and existing items
+
+                          // Add new items if they don't exceed the limit when combined with existing ones
+                          const currentCount = components.length;
+                          const potentialNewCount = currentCount + newItems.length;
+
+                          if (potentialNewCount > 30) {
+                             const itemsToAddCount = 30 - currentCount;
+                             const itemsToAdd = newItems.slice(0, itemsToAddCount);
+                             if(itemsToAdd.length > 0) {
+                                 setComponents(prev => [...prev, ...itemsToAdd]);
+                             }
+                             setToast({
+                               open: true,
+                               message: `You can add a maximum of 30 components. ${currentCount} already added, ${newItems.length - itemsToAddCount} items were not added.`, // More detailed message
+                               severity: "warning"
+                             });
+                          } else if (newItems.length > 0) {
+                              setComponents(prev => [...prev, ...newItems]);
+                          }
+
+                          // Clear the input string after processing comma-separated input
+                          setInputString('');
+                        }
+                      }}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => {
+                          const { key, ...chipProps } = getTagProps({ index });
+                          return (
+                            <Chip
+                              key={key}
+                              label={option}
+                              {...chipProps}
+                              sx={{
+                                backgroundColor: theme.palette.primary.light,
+                                color: theme.palette.primary.contrastText,
+                                '& .MuiChip-deleteIcon': {
+                                  color: theme.palette.primary.contrastText,
+                                  '&:hover': {
+                                    color: theme.palette.error.main,
+                                  },
+                                },
+                              }}
+                            />
+                          );
+                        })
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Borrowed Components"
+                          placeholder="Enter components (press Enter or comma to add)"
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <ExtensionIcon sx={{ mr: 1, color: 'text.secondary', alignSelf: 'flex-start', mt: 1 }} />
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'white',
+                          '& fieldset': {
+                            borderColor: 'rgba(0, 0, 0, 0.23)'
+                          },
+                          '&:hover fieldset': {
+                            borderColor: 'rgba(0, 0, 0, 0.23)'
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: 'primary.main'
+                          }
+                        }
+                      }}
                     />
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, ml: 1 }}>
+                      Enter components and press Enter or comma to add them as chips. You can also paste a comma-separated list.
+                    </Typography>
                   </Grid>
 
                   <Grid item xs={12}>
