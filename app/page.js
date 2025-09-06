@@ -356,7 +356,7 @@ const WelcomeBanner = ({ userName }) => {
               Track, manage, and submit your projects with ease.
             </Typography>
           </Grid>
-          <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: { xs: 2, md: 0 } }}>
+          <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: { xs: 2, md: 0 }, gap: 1, flexWrap: 'wrap' }}>
             <Button 
               variant="contained" 
               color="primary"
@@ -372,6 +372,20 @@ const WelcomeBanner = ({ userName }) => {
               }}
             >
               New Project
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="secondary"
+              component={Link}
+              href="/idealab"
+              sx={{ 
+                px: 3, 
+                py: 1.2,
+                fontWeight: 600,
+                borderRadius: 2,
+              }}
+            >
+              Explore IDEA Lab
             </Button>
           </Grid>
         </Grid>
@@ -637,15 +651,27 @@ export default function Home() {
                 TrackLab helps you manage and submit your projects with ease. Sign in to start tracking your progress.
               </Typography>
 
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
-                onClick={() => router.push("/api/auth/signin")}
-              >
-                Login to Get Started
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
+                  onClick={() => router.push("/api/auth/signin")}
+                >
+                  Login to Get Started
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  size="large"
+                  component={Link}
+                  href="/idealab"
+                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
+                >
+                  Explore IDEA Lab
+                </Button>
+              </Box>
             </Box>
           )}
         </motion.div>

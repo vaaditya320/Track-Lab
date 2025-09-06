@@ -52,6 +52,16 @@ model Achievement {
   userId      String
 }
 
+model IdealabProject {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  githubLink  String
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 enum Status {
   PARTIAL
   SUBMITTED
