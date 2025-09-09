@@ -1,9 +1,9 @@
 "use client";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  MenuItem, Select, Button, Typography, Box, FormControl, InputLabel, CircularProgress, Alert, Paper, TextField, Grid, Table, TableBody, TableCell, TableContainer, TableRow, useTheme, Avatar, Divider, Card, CardContent
+  MenuItem, Select, Button, Typography, Box, FormControl, InputLabel, CircularProgress, Alert, Paper, TextField, Grid, Table, TableBody, TableCell, TableContainer, TableRow, useTheme, Avatar, Divider, Card, CardContent, InputAdornment
 } from "@mui/material";
 import SchoolIcon from '@mui/icons-material/School';
 import EmailIcon from '@mui/icons-material/Email';
@@ -16,6 +16,7 @@ import ClassIcon from '@mui/icons-material/Class';
 import PersonIcon from '@mui/icons-material/Person';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
 import { motion, AnimatePresence } from "framer-motion";
 
 const BRANCHES = [
@@ -136,31 +137,111 @@ const ProfileSkeleton = () => {
   );
 };
 
+const InfoRow = ({ icon, label, value, editable, children, theme }) => (
+  <div>
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      mb: 2,
+      p: 2,
+      borderRadius: 1,
+      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+      transition: 'all 0.2s ease-in-out',
+      '&:hover': {
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+        transform: 'translateY(-2px)',
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 4px 12px rgba(0,0,0,0.2)' 
+          : '0 4px 12px rgba(0,0,0,0.05)'
+      }
+    }}>
+      <Box sx={{ 
+        mr: 2, 
+        color: 'primary.main',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: '50%',
+        bgcolor: theme.palette.mode === 'dark' 
+          ? 'rgba(255, 255, 255, 0.05)' 
+          : 'rgba(0, 0, 0, 0.02)'
+      }}>
+        {icon}
+      </Box>
+      <Box sx={{ flex: 1 }}>
+        <Typography 
+          variant="subtitle2" 
+          color="text.secondary" 
+          gutterBottom
+          sx={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          {label}
+          {editable && (
+            <EditIcon 
+              sx={{ 
+                fontSize: 16,
+                color: 'primary.main',
+                opacity: 0.7
+              }} 
+            />
+          )}
+        </Typography>
+        {editable ? children : (
+          <Typography 
+            variant="body1" 
+            fontWeight="medium"
+            sx={{
+              color: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.9)' 
+                : 'text.primary'
+            }}
+          >
+            {value}
+          </Typography>
+        )}
+      </Box>
+    </Box>
+  </div>
+);
+
 export default function ProfilePage() {
   const theme = useTheme();
   const { data: session, status, update } = useSession();
   const [branch, setBranch] = useState("");
   const [section, setSection] = useState("");
   const [batch, setBatch] = useState("");
+  const [phoneDigits, setPhoneDigits] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const initializedRef = useRef(false);
 
   // Extract non-editable info from session
   const user = session?.user;
 
   useEffect(() => {
-    if (status === "authenticated" && user) {
+    if (status === "authenticated" && user && !initializedRef.current) {
       setBranch(user.branch || "");
       setSection(user.section || "");
       setBatch(user.batch || "");
+      const existing = user.phoneNumber || "";
+      const digitsOnly = existing.replace(/[^0-9]/g, "");
+      const normalized = digitsOnly.startsWith("91") ? digitsOnly.slice(2) : digitsOnly;
+      setPhoneDigits(normalized.slice(0, 10));
       setLoading(false);
+      initializedRef.current = true;
     } else if (status === "unauthenticated") {
       router.push("/api/auth/signin");
     }
-  }, [status, user]);
+  }, [status, user, router]);
 
   useEffect(() => {
     if (success) {
@@ -179,7 +260,7 @@ export default function ProfilePage() {
       const res = await fetch("/api/users/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch, section, batch }),
+        body: JSON.stringify({ branch, section, batch, phoneNumber: phoneDigits || null }),
       });
       if (!res.ok) throw new Error("Failed to save profile info");
       setSuccess(true);
@@ -197,83 +278,6 @@ export default function ProfilePage() {
   }
 
   if (!user) return null;
-
-  const InfoRow = ({ icon, label, value, editable, children }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        mb: 2,
-        p: 2,
-        borderRadius: 1,
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-          transform: 'translateY(-2px)',
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.2)' 
-            : '0 4px 12px rgba(0,0,0,0.05)'
-        }
-      }}>
-        <Box sx={{ 
-          mr: 2, 
-          color: 'primary.main',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          bgcolor: theme.palette.mode === 'dark' 
-            ? 'rgba(255, 255, 255, 0.05)' 
-            : 'rgba(0, 0, 0, 0.02)'
-        }}>
-          {icon}
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography 
-            variant="subtitle2" 
-            color="text.secondary" 
-            gutterBottom
-            sx={{ 
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}
-          >
-            {label}
-            {editable && (
-              <EditIcon 
-                sx={{ 
-                  fontSize: 16,
-                  color: 'primary.main',
-                  opacity: 0.7
-                }} 
-              />
-            )}
-          </Typography>
-          {editable ? children : (
-            <Typography 
-              variant="body1" 
-              fontWeight="medium"
-              sx={{
-                color: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.9)' 
-                  : 'text.primary'
-              }}
-            >
-              {value}
-            </Typography>
-          )}
-        </Box>
-      </Box>
-    </motion.div>
-  );
 
   return (
     <motion.div
@@ -357,6 +361,7 @@ export default function ProfilePage() {
             <AnimatePresence>
               {error && (
                 <motion.div
+                  key="error-alert"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -377,6 +382,7 @@ export default function ProfilePage() {
               )}
               {success && (
                 <motion.div
+                  key="success-alert"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -401,32 +407,38 @@ export default function ProfilePage() {
               icon={<BadgeIcon />} 
               label="User ID" 
               value={user.id} 
+              theme={theme}
             />
             <InfoRow 
               icon={<SchoolIcon />} 
               label="Registration ID" 
               value={user.regId} 
+              theme={theme}
             />
             <InfoRow 
               icon={<EmailIcon />} 
               label="Email" 
               value={user.email} 
+              theme={theme}
             />
             <InfoRow 
               icon={<BusinessIcon />} 
               label="Institution" 
               value={user.regId?.includes('piet') ? 'Poornima Institute of Engineering and Technology' : 'Not Specified'} 
+              theme={theme}
             />
             <InfoRow 
               icon={<CalendarTodayIcon />} 
               label="Cohort" 
               value={user.regId?.match(/\d{4}/)?.[0] || 'N/A'} 
+              theme={theme}
             />
             <InfoRow 
               icon={<CategoryIcon />} 
               label="Branch" 
               value={user.branch ? BRANCHES.find(b => b.value === user.branch)?.label || user.branch : ''}
               editable={!user.branch}
+              theme={theme}
             >
               <FormControl fullWidth>
                 <InputLabel>Branch</InputLabel>
@@ -452,10 +464,45 @@ export default function ProfilePage() {
               </FormControl>
             </InfoRow>
             <InfoRow 
+              icon={<PhoneIphoneIcon />} 
+              label="Phone Number" 
+              value={user.phoneNumber || ''}
+              editable={true}
+              theme={theme}
+            >
+              {!user.phoneNumber ? (
+                <TextField 
+                  fullWidth 
+                  type="tel"
+                  value={phoneDigits}
+                  onChange={(e) => {
+                    const digits = (e.target.value || '').replace(/\D/g, '').slice(0, 10);
+                    setPhoneDigits(digits);
+                  }}
+                  inputProps={{ inputMode: 'numeric' }}
+                  placeholder="9876543210"
+                  InputProps={{ startAdornment: <InputAdornment position="start">+91</InputAdornment> }}
+                />
+              ) : (
+                <Typography 
+                  variant="body1" 
+                  fontWeight="medium"
+                  sx={{
+                    color: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.9)' 
+                      : 'text.primary'
+                  }}
+                >
+                  {user.phoneNumber}
+                </Typography>
+              )}
+            </InfoRow>
+            <InfoRow 
               icon={<GroupIcon />} 
               label="Section" 
               value={user.section}
               editable={!user.section}
+              theme={theme}
             >
               <FormControl fullWidth>
                 <InputLabel>Section</InputLabel>
@@ -485,6 +532,7 @@ export default function ProfilePage() {
               label="Batch" 
               value={user.batch}
               editable={!user.batch}
+              theme={theme}
             >
               <FormControl fullWidth>
                 <InputLabel>Batch</InputLabel>
@@ -511,7 +559,7 @@ export default function ProfilePage() {
             </InfoRow>
           </CardContent>
 
-          {(!user.branch || !user.section || !user.batch) && (
+          {(!user.branch || !user.section || !user.batch || !user.phoneNumber) && (
             <Box sx={{ p: 3, pt: 0 }}>
               <motion.div
                 whileHover={{ scale: 1.02 }}
@@ -522,7 +570,7 @@ export default function ProfilePage() {
                   color="primary" 
                   fullWidth 
                   onClick={handleSave} 
-                  disabled={saving || !branch || !section || !batch}
+                  disabled={saving || !branch || !section || !batch || !(phoneDigits && /^\d{10}$/.test(phoneDigits))}
                   sx={{ 
                     py: 1.5,
                     borderRadius: 2,
@@ -555,4 +603,4 @@ export default function ProfilePage() {
       </Box>
     </motion.div>
   );
-} 
+}

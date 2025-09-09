@@ -426,7 +426,7 @@ export default function Home() {
   useEffect(() => {
     if (status === "authenticated") {
       // Redirect to /profile if any required field is missing
-      if (!session?.user?.branch || !session?.user?.section || !session?.user?.batch) {
+      if (!session?.user?.branch || !session?.user?.section || !session?.user?.batch || !session?.user?.phoneNumber) {
         router.push("/profile");
       } else {
         fetchProjects();
@@ -434,7 +434,7 @@ export default function Home() {
     } else if (status === "unauthenticated") {
       setLoading(false);
     }
-  }, [status, session?.user?.id, session?.user?.branch, session?.user?.section, session?.user?.batch]);
+  }, [status, session?.user?.id, session?.user?.branch, session?.user?.section, session?.user?.batch, session?.user?.phoneNumber]);
 
   const handleDownloadSummary = async (projectId) => {
     setLoadingProjectId(projectId);

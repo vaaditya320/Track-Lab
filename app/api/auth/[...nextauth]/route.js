@@ -62,6 +62,7 @@ export const authOptions = {
         session.user.branch = dbUser.branch || null;
         session.user.section = dbUser.section || null;
         session.user.batch = dbUser.batch || null;
+        session.user.phoneNumber = dbUser.phoneNumber || null;
       }
 
       return session;

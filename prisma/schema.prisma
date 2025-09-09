@@ -12,6 +12,7 @@ model User {
   name            String
   regId           String    @unique
   email           String    @unique
+  phoneNumber     String?   // E.164 format preferred; e.g., +911234567890
   role            Role      @default(STUDENT) // Role field with default value
   branch          Branch?   // New enum field for branch
   section         Section?  // New enum field for section

@@ -8,12 +8,12 @@ export async function PUT(req) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
-  const { branch, section, batch } = await req.json();
+  const { branch, section, batch, phoneNumber } = await req.json();
 
   try {
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
-      data: { branch, section, batch },
+      data: { branch, section, batch, phoneNumber },
     });
     return new Response(JSON.stringify(updatedUser), { status: 200 });
   } catch (error) {
@@ -33,6 +33,7 @@ export async function GET() {
       name: true,
       regId: true,
       email: true,
+      phoneNumber: true,
       branch: true,
       section: true,
       batch: true,
