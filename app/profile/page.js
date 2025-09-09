@@ -480,7 +480,7 @@ export default function ProfilePage() {
                     setPhoneDigits(digits);
                   }}
                   inputProps={{ inputMode: 'numeric' }}
-                  placeholder="9876543210"
+                  placeholder="9929575464"
                   InputProps={{ startAdornment: <InputAdornment position="start">+91</InputAdornment> }}
                 />
               ) : (

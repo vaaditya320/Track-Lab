@@ -14,30 +14,53 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
 
+    // Require role parameter
+    if (!role) {
+      return NextResponse.json(
+        { error: "Role parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    // Only allow specific roles: TEACHER and admin
+    if (role !== "TEACHER" && role !== "admin") {
+      return NextResponse.json(
+        { error: "Invalid role. Only 'TEACHER' and 'admin' roles are allowed" },
+        { status: 400 }
+      );
+    }
+
     let users;
-    if (role) {
-      // If role is specified, fetch users with that role
+    if (role === "admin") {
+      // Return admins and super admins
       users = await prisma.user.findMany({
         where: {
-          role: role
+          role: {
+            in: ["ADMIN", "SUPER_ADMIN"]
+          }
         },
         select: {
           id: true,
           name: true,
           email: true,
           regId: true,
-          role: true
+          role: true,
+          phoneNumber: true
         }
       });
-    } else {
-      // If no role specified, fetch all users
+    } else if (role === "TEACHER") {
+      // Return only teachers
       users = await prisma.user.findMany({
+        where: {
+          role: "TEACHER"
+        },
         select: {
           id: true,
           name: true,
           email: true,
           regId: true,
-          role: true
+          role: true,
+          phoneNumber: true
         }
       });
     }

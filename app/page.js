@@ -20,6 +20,7 @@ import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import CloseIcon from '@mui/icons-material/Close';
+import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 import ProjectStatusBadge from "./components/ProjectStatusBadge";
 import ProjectStatsCard from "./components/ProjectStatsCard";
 import DashboardSkeleton from "./components/DashboardSkeleton";
@@ -356,37 +357,76 @@ const WelcomeBanner = ({ userName }) => {
               Track, manage, and submit your projects with ease.
             </Typography>
           </Grid>
-          <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, mt: { xs: 2, md: 0 }, gap: 1, flexWrap: 'wrap' }}>
-            <Button 
-              variant="contained" 
-              color="primary"
-              startIcon={<AddIcon />}
-              component={Link}
-              href="/projects/create"
-              sx={{ 
-                px: 3, 
-                py: 1.2,
-                fontWeight: 600,
-                boxShadow: 2,
-                borderRadius: 2,
-              }}
-            >
-              New Project
-            </Button>
-            <Button 
-              variant="outlined" 
-              color="secondary"
-              component={Link}
-              href="/idealab"
-              sx={{ 
-                px: 3, 
-                py: 1.2,
-                fontWeight: 600,
-                borderRadius: 2,
-              }}
-            >
-              Explore IDEA Lab
-            </Button>
+          <Grid item xs={12} md={4} sx={{ mt: { xs: 2, md: 0 } }}>
+            <Grid container spacing={1.5}>
+              <Grid item xs={6}>
+                <Button 
+                  variant="contained" 
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  component={Link}
+                  href="/projects/create"
+                  fullWidth
+                  sx={{ 
+                    py: 1.5,
+                    fontWeight: 600,
+                    boxShadow: 2,
+                    borderRadius: 2,
+                  }}
+                >
+                  New Project
+                </Button>
+              </Grid>
+              <Grid item xs={6}>
+                <Button 
+                  variant="outlined" 
+                  color="secondary"
+                  component={Link}
+                  href="/idealab"
+                  fullWidth
+                  sx={{ 
+                    py: 1.5,
+                    fontWeight: 600,
+                    borderRadius: 2,
+                  }}
+                >
+                  Explore IDEA Lab
+                </Button>
+              </Grid>
+              <Grid item xs={6}>
+                <Button 
+                  variant="outlined" 
+                  color="secondary"
+                  component={Link}
+                  href="/get-started"
+                  fullWidth
+                  sx={{ 
+                    py: 1.5,
+                    fontWeight: 600,
+                    borderRadius: 2,
+                  }}
+                >
+                  Get Started
+                </Button>
+              </Grid>
+              <Grid item xs={6}>
+                <Button 
+                  variant="outlined" 
+                  color="info"
+                  startIcon={<ContactSupportIcon />}
+                  component={Link}
+                  href="/contact-admin"
+                  fullWidth
+                  sx={{ 
+                    py: 1.5,
+                    fontWeight: 600,
+                    borderRadius: 2,
+                  }}
+                >
+                  Contact Admin
+                </Button>
+              </Grid>
+            </Grid>
           </Grid>
         </Grid>
       </CardContent>
@@ -651,12 +691,22 @@ export default function Home() {
                 TrackLab helps you manage and submit your projects with ease. Sign in to start tracking your progress.
               </Typography>
 
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  size="large"
+                  component={Link}
+                  href="/idealab"
+                  sx={{ py: 1.5, px: 3, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
+                >
+                  Explore IDEA Lab
+                </Button>
                 <Button
                   variant="contained"
                   color="primary"
                   size="large"
-                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
+                  sx={{ py: 1.5, px: 4, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
                   onClick={() => router.push("/api/auth/signin")}
                 >
                   Login to Get Started
@@ -666,10 +716,10 @@ export default function Home() {
                   color="secondary"
                   size="large"
                   component={Link}
-                  href="/idealab"
-                  sx={{ px: 4, py: 1.5, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
+                  href="/get-started"
+                  sx={{ py: 1.5, px: 3, fontSize: "16px", fontWeight: 600, borderRadius: 2 }}
                 >
-                  Explore IDEA Lab
+                  Get Started
                 </Button>
               </Box>
             </Box>

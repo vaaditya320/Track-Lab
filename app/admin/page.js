@@ -21,6 +21,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import InfoIcon from '@mui/icons-material/Info';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import StarIcon from '@mui/icons-material/Star';
 import { isSuperAdmin } from "@/lib/isSuperAdmin";
 
 // LoadingSkeleton component
@@ -617,65 +618,194 @@ export default function AdminPage() {
             Admin Dashboard
           </Typography>
           
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            {/* Special button for specific user */}
-            {hasSpecialAccess && (
-              <Tooltip title="Special User Access">
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={() => router.push('/admin/user-roles')}
-                  fullWidth={isMobile}
-                  sx={{ 
-                    background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
-                    boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
-                    '&:hover': {
-                      background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
-                      boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
-                    }
-                  }}
-                >
-                  User Management
-                </Button>
-              </Tooltip>
-            )}
-            
-            <Button
-              variant="contained"
-              color="info"
-              onClick={() => router.push('/admin/logs')}
-              fullWidth={isMobile}
-              startIcon={<AssessmentIcon />}
-              sx={{
-                background: "linear-gradient(45deg, #00BCD4 0%, #0097A7 100%)",
-                boxShadow: "0 4px 20px rgba(0, 188, 212, 0.3)",
-                '&:hover': {
-                  background: "linear-gradient(45deg, #0097A7 0%, #006064 100%)",
-                  boxShadow: "0 6px 25px rgba(0, 188, 212, 0.4)",
-                }
-              }}
-            >
-              System Logs
-            </Button>
+           {/* Desktop: Horizontal layout */}
+           <Box sx={{ 
+             display: { xs: 'none', sm: 'flex' }, 
+             gap: 2, 
+             flexWrap: 'wrap',
+             justifyContent: 'flex-start'
+           }}>
+             {/* Special button for specific user */}
+             {hasSpecialAccess && (
+               <Tooltip title="Special User Access">
+                 <Button
+                   variant="contained"
+                   color="secondary"
+                   onClick={() => router.push('/admin/user-roles')}
+                   sx={{ 
+                     flex: '0 1 auto',
+                     background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
+                     boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
+                     '&:hover': {
+                       background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
+                       boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
+                     }
+                   }}
+                   startIcon={<AssessmentIcon />}
+                 >
+                   User Management
+                 </Button>
+               </Tooltip>
+             )}
+             
+             <Button
+               variant="contained"
+               color="info"
+               onClick={() => router.push('/admin/logs')}
+               sx={{
+                 flex: '0 1 auto',
+                 background: "linear-gradient(45deg, #00BCD4 0%, #0097A7 100%)",
+                 boxShadow: "0 4px 20px rgba(0, 188, 212, 0.3)",
+                 '&:hover': {
+                   background: "linear-gradient(45deg, #0097A7 0%, #006064 100%)",
+                   boxShadow: "0 6px 25px rgba(0, 188, 212, 0.4)",
+                 }
+               }}
+               startIcon={<AssessmentIcon />}
+             >
+               System Logs
+             </Button>
 
-            <Button
-              variant="contained"
-              color="warning"
-              onClick={() => router.push('/admin/achievements')}
-              fullWidth={isMobile}
-              startIcon={<EmojiEventsIcon />}
-              sx={{
-                background: "linear-gradient(45deg, #FF9800 0%, #F57C00 100%)",
-                boxShadow: "0 4px 20px rgba(255, 152, 0, 0.3)",
-                '&:hover': {
-                  background: "linear-gradient(45deg, #F57C00 0%, #EF6C00 100%)",
-                  boxShadow: "0 6px 25px rgba(255, 152, 0, 0.4)",
-                }
-              }}
-            >
-              Achievements
-            </Button>
-          </Box>
+             <Button
+               variant="contained"
+               color="warning"
+               onClick={() => router.push('/admin/achievements')}
+               sx={{
+                 flex: '0 1 auto',
+                 background: "linear-gradient(45deg, #FF9800 0%, #F57C00 100%)",
+                 boxShadow: "0 4px 20px rgba(255, 152, 0, 0.3)",
+                 '&:hover': {
+                   background: "linear-gradient(45deg, #F57C00 0%, #EF6C00 100%)",
+                   boxShadow: "0 6px 25px rgba(255, 152, 0, 0.4)",
+                 }
+               }}
+               startIcon={<EmojiEventsIcon />}
+             >
+               Achievements
+             </Button>
+
+             <Button
+               variant="contained"
+               color="primary"
+               onClick={() => router.push('/admin/idealab/projects')}
+               sx={{
+                 flex: '0 1 auto',
+                 background: "linear-gradient(45deg, #9C27B0 0%, #673AB7 100%)",
+                 boxShadow: "0 4px 20px rgba(156, 39, 176, 0.3)",
+                 '&:hover': {
+                   background: "linear-gradient(45deg, #8E24AA 0%, #5E35B1 100%)",
+                   boxShadow: "0 6px 25px rgba(156, 39, 176, 0.4)",
+                 }
+               }}
+               startIcon={<StarIcon />}
+             >
+               Star Projects
+             </Button>
+           </Box>
+
+           {/* Mobile: 2x2 Grid layout */}
+           <Grid container spacing={2} sx={{ display: { xs: 'flex', sm: 'none' } }}>
+             {/* Special button for specific user */}
+             {hasSpecialAccess && (
+               <Grid item xs={6}>
+                 <Tooltip title="Special User Access">
+                   <Button
+                     variant="contained"
+                     color="secondary"
+                     onClick={() => router.push('/admin/user-roles')}
+                     fullWidth
+                     sx={{ 
+                       height: 80,
+                       py: 2,
+                       px: 1,
+                       fontSize: '0.875rem',
+                       background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
+                       boxShadow: "0 4px 20px rgba(106, 17, 203, 0.3)",
+                       '&:hover': {
+                         background: "linear-gradient(45deg, #5a00cb 0%, #1565fc 100%)",
+                         boxShadow: "0 6px 25px rgba(106, 17, 203, 0.4)",
+                       }
+                     }}
+                     startIcon={<AssessmentIcon />}
+                   >
+                     User Management
+                   </Button>
+                 </Tooltip>
+               </Grid>
+             )}
+             
+             <Grid item xs={hasSpecialAccess ? 6 : 6}>
+               <Button
+                 variant="contained"
+                 color="info"
+                 onClick={() => router.push('/admin/logs')}
+                 fullWidth
+                 sx={{
+                   height: 80,
+                   py: 2,
+                   px: 1,
+                   fontSize: '0.875rem',
+                   background: "linear-gradient(45deg, #00BCD4 0%, #0097A7 100%)",
+                   boxShadow: "0 4px 20px rgba(0, 188, 212, 0.3)",
+                   '&:hover': {
+                     background: "linear-gradient(45deg, #0097A7 0%, #006064 100%)",
+                     boxShadow: "0 6px 25px rgba(0, 188, 212, 0.4)",
+                   }
+                 }}
+                 startIcon={<AssessmentIcon />}
+               >
+                 System Logs
+               </Button>
+             </Grid>
+
+             <Grid item xs={6}>
+               <Button
+                 variant="contained"
+                 color="warning"
+                 onClick={() => router.push('/admin/achievements')}
+                 fullWidth
+                 sx={{
+                   height: 80,
+                   py: 2,
+                   px: 1,
+                   fontSize: '0.875rem',
+                   background: "linear-gradient(45deg, #FF9800 0%, #F57C00 100%)",
+                   boxShadow: "0 4px 20px rgba(255, 152, 0, 0.3)",
+                   '&:hover': {
+                     background: "linear-gradient(45deg, #F57C00 0%, #EF6C00 100%)",
+                     boxShadow: "0 6px 25px rgba(255, 152, 0, 0.4)",
+                   }
+                 }}
+                 startIcon={<EmojiEventsIcon />}
+               >
+                 Achievements
+               </Button>
+             </Grid>
+
+             <Grid item xs={6}>
+               <Button
+                 variant="contained"
+                 color="primary"
+                 onClick={() => router.push('/admin/idealab/projects')}
+                 fullWidth
+                 sx={{
+                   height: 80,
+                   py: 2,
+                   px: 1,
+                   fontSize: '0.875rem',
+                   background: "linear-gradient(45deg, #9C27B0 0%, #673AB7 100%)",
+                   boxShadow: "0 4px 20px rgba(156, 39, 176, 0.3)",
+                   '&:hover': {
+                     background: "linear-gradient(45deg, #8E24AA 0%, #5E35B1 100%)",
+                     boxShadow: "0 6px 25px rgba(156, 39, 176, 0.4)",
+                   }
+                 }}
+                 startIcon={<StarIcon />}
+               >
+                 Star Projects
+               </Button>
+             </Grid>
+           </Grid>
         </Box>
 
         <Box sx={{ mb: 4 }}>
