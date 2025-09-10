@@ -13,7 +13,6 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import SupervisedUserCircleIcon from '@mui/icons-material/SupervisedUserCircle';
 import EmailIcon from '@mui/icons-material/Email';
-import PhoneIcon from '@mui/icons-material/Phone';
 import PersonIcon from '@mui/icons-material/Person';
 
 export default function ContactAdmin() {
@@ -248,14 +247,7 @@ export default function ContactAdmin() {
                           </Typography>
                         </Box>
 
-                        {admin.phoneNumber && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                            <PhoneIcon sx={{ fontSize: 20, color: 'text.secondary', mr: 1 }} />
-                            <Typography variant="body2" color="text.primary">
-                              {admin.phoneNumber}
-                            </Typography>
-                          </Box>
-                        )}
+                        
 
                         {admin.regId && (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -280,19 +272,7 @@ export default function ContactAdmin() {
                         >
                           Email
                         </Button>
-                        {admin.phoneNumber && (
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            size="small"
-                            fullWidth
-                            startIcon={<PhoneIcon />}
-                            onClick={() => window.open(`tel:${admin.phoneNumber}`, '_blank')}
-                            sx={{ borderRadius: 2 }}
-                          >
-                            Call
-                          </Button>
-                        )}
+                        
                       </Box>
                     </CardContent>
                   </Card>

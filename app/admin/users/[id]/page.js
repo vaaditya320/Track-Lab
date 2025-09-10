@@ -33,7 +33,8 @@ import {
   KeyboardBackspace as BackIcon,
   Key as KeyIcon,
   CalendarToday as CalendarIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Phone as PhoneIcon
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 
@@ -231,6 +232,15 @@ export default function UserDetailsPage() {
                             </Box>
                           </TableCell>
                           <TableCell sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>{user.email}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 'bold', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <PhoneIcon sx={{ mr: 2, color: 'text.secondary' }} />
+                              Phone
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>{user.phoneNumber || 'N/A'}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
