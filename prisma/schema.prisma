@@ -82,6 +82,7 @@ enum Branch {
   CSDS // CS(DS)
   AIDS
   CSIOT // CS(IOT)
+  EC
 }
 
 enum Section {
@@ -93,6 +94,7 @@ enum Section {
   F
   G
   H
+  I
 }
 
 enum Batch {
@@ -120,4 +122,7 @@ enum Batch {
   H1
   H2
   H3
+  I1
+  I2
+  I3
 }

@@ -26,10 +26,11 @@ const BRANCHES = [
   { value: "CSDS", label: "CS(DS)" },
   { value: "AIDS", label: "AIDS" },
   { value: "CSIOT", label: "CS(IOT)" },
+  { value: "EC", label: "EC" },
 ];
-const SECTIONS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const SECTIONS = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
 const BATCHES = [
-  "A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3", "D1", "D2", "D3", "E1", "E2", "E3", "F1", "F2", "F3", "G1", "G2", "G3", "H1", "H2", "H3"
+  "A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3", "D1", "D2", "D3", "E1", "E2", "E3", "F1", "F2", "F3", "G1", "G2", "G3", "H1", "H2", "H3", "I1", "I2", "I3"
 ];
 
 // Loading skeleton component
