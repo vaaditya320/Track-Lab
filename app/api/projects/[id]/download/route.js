@@ -70,7 +70,7 @@ async function fetchImageFromS3(s3Key) {
 }
 
 // Generate PDF and upload to S3
-async function generateAndUploadPDF(project, leaderName) {
+async function generateAndUploadPDF(project, leaderName, sessionUser) {
   try {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595, 842]); // A4 size
@@ -111,6 +111,35 @@ async function generateAndUploadPDF(project, leaderName) {
       x: marginX,
       y: height - 50,
       size: 30,
+      font: boldFont,
+      color: rgb(1, 1, 1)
+    });
+    // Top-right: Batch / Branch / Cohort
+    const userBatch = sessionUser?.batch || "";
+    const userBranch = sessionUser?.branch || "";
+    const userEmail = sessionUser?.email || "";
+    const cohort = userEmail ? userEmail.slice(0, 4) : "";
+    const metaFontSize = 11;
+    const rightColumnX = width - marginX - 200;
+    const headerTextY = height - 40;
+    page.drawText(`Batch: ${userBatch || "-"}`, {
+      x: rightColumnX,
+      y: headerTextY,
+      size: metaFontSize,
+      font: boldFont,
+      color: rgb(1, 1, 1)
+    });
+    page.drawText(`Branch: ${userBranch || "-"}`, {
+      x: rightColumnX,
+      y: headerTextY - 16,
+      size: metaFontSize,
+      font: boldFont,
+      color: rgb(1, 1, 1)
+    });
+    page.drawText(`Cohort: ${cohort || "-"}`, {
+      x: rightColumnX,
+      y: headerTextY - 32,
+      size: metaFontSize,
       font: boldFont,
       color: rgb(1, 1, 1)
     });
@@ -705,7 +734,7 @@ export async function GET(req, { params }) {
     } else {
       console.log("PDF not found. Generating new PDF...");
       // Pass project object to generateAndUploadPDF
-      await generateAndUploadPDF(project, leaderName);
+      await generateAndUploadPDF(project, leaderName, session.user);
       pdfBuffer = await fetchPdfFromS3(s3Key);
     }
 
