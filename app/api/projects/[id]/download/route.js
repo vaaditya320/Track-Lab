@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import nodemailer from "nodemailer";
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { Buffer } from "buffer";
 
@@ -572,13 +571,12 @@ async function generateAndUploadPDF(project, leaderName) {
 // Send email with PDF attachment and HTML body
 async function sendEmailWithPDF(userEmail, pdfBuffer, s3Key, project) {
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error("BREVO_API_KEY is not configured");
+    }
+    if (!process.env.EMAIL_FROM) {
+      throw new Error("EMAIL_FROM is not configured");
+    }
 
     // Theme color
     const themeColor = "#364ED2"; // rgb(54/255, 78/255, 210/255) in hex
@@ -621,19 +619,51 @@ async function sendEmailWithPDF(userEmail, pdfBuffer, s3Key, project) {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to: userEmail,
-      subject: `Project Report for ${project.title || "Untitled Project"}`,
-      html: htmlBody, // Use html field instead of text
-      attachments: [
-        {
-          filename: `${s3Key.split("/").pop()}`,
-          content: pdfBuffer,
-          encoding: "base64",
-        },
-      ],
-    });
+    // Brevo SMTP API: https://developers.brevo.com/reference/sendtransacemail
+    const maxAttempts = 3;
+    let attempt = 0;
+    let lastError;
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      try {
+        const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "api-key": process.env.BREVO_API_KEY,
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            sender: { email: process.env.EMAIL_FROM },
+            to: [{ email: userEmail }],
+            subject: `Project Report for ${project.title || "Untitled Project"}`,
+            htmlContent: htmlBody,
+            attachment: [
+              {
+                name: `${s3Key.split("/").pop()}`,
+                content: Buffer.isBuffer(pdfBuffer) ? pdfBuffer.toString("base64") : pdfBuffer,
+              },
+            ],
+          }),
+        });
+
+        if (!brevoResponse.ok) {
+          const text = await brevoResponse.text();
+          throw new Error(`Brevo API error (${brevoResponse.status}): ${text}`);
+        }
+        break; // success
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxAttempts) {
+          const backoffMs = 250 * Math.pow(2, attempt - 1);
+          await new Promise((r) => setTimeout(r, backoffMs));
+          continue;
+        }
+      }
+    }
+    if (lastError) {
+      throw lastError;
+    }
 
     console.log("Email sent with PDF attachment and HTML body");
   } catch (error) {
