@@ -63,6 +63,14 @@ model IdealabProject {
   updatedAt   DateTime @updatedAt
 }
 
+model Overlord {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum Status {
   PARTIAL
   SUBMITTED
