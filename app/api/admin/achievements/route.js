@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { isAdmin } from "@/lib/isAdmin";
+import { logAdminAction, LogType } from "@/lib/logger";
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -14,5 +15,12 @@ export async function GET(req) {
     },
     orderBy: { createdAt: "desc" },
   });
+
+  await logAdminAction(
+    `Achievements fetched by admin ${session.user.name} (${session.user.email})`,
+    LogType.OTHER,
+    { adminEmail: session.user.email }
+  );
+
   return new Response(JSON.stringify(achievements), { status: 200 });
 } 

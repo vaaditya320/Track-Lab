@@ -232,7 +232,7 @@ export default function AdminLogs() {
       const data = await response.json();
       const categorizedLogs = data.logs.map(log => ({
         ...log,
-        type: categorizeLog(log.message)
+        type: log.type || categorizeLog(log.message)
       }));
       setLogs(categorizedLogs);
       setFilteredLogs(categorizedLogs);
@@ -262,7 +262,6 @@ export default function AdminLogs() {
     // Apply date range filter
     if (filters.dateRange !== 'ALL') {
       const now = new Date();
-      const logDate = new Date(log.timestamp);
       
       switch (filters.dateRange) {
         case 'TODAY':

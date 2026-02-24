@@ -33,7 +33,9 @@ export async function DELETE(req, { params }) {
 
     // Log the admin action
     await logAdminAction(
-      `Idea Lab project "${projectToDelete.name}" deleted by admin ${session.user.name} (${session.user.email})`
+      `Idea Lab project "${projectToDelete.name}" deleted by admin ${session.user.name} (${session.user.email})`,
+      LogType.PROJECT_DELETION,
+      { adminEmail: session?.user?.email, projectId: id, projectName: projectToDelete.name }
     );
 
     return new Response(JSON.stringify(deletedProject), { status: 200 });

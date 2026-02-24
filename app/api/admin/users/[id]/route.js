@@ -26,7 +26,9 @@ export async function GET(req, { params }) {
 
     // Log the admin action
     await logAdminAction(
-      `Admin ${session.user.name} (${session.user.email}) viewed user details for ${user.name} (${user.email}) (${user.role})`
+      `Admin ${session.user.name} (${session.user.email}) viewed user details for ${user.name} (${user.email}) (${user.role})`,
+      LogType.USER_MANAGEMENT,
+      { adminEmail: session.user.email, targetUserId: id }
     );
 
     return new Response(JSON.stringify(user), { status: 200 });

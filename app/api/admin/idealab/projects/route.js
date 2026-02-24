@@ -66,7 +66,7 @@ export async function POST(req) {
     await logAdminAction(
       `Idea Lab project created: ${newProject.name} (ID: ${newProject.id})`,
       LogType.PROJECT_CREATION,
-      { projectId: newProject.id, projectName: newProject.name }
+      { adminEmail: session?.user?.email, projectId: newProject.id, projectName: newProject.name }
     );
 
     return new Response(JSON.stringify(newProject), { status: 201 });

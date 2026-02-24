@@ -66,7 +66,12 @@ export async function PUT(req, { params }) {
     await logAdminAction(
       `Project updated: ${updatedProject.title} (ID: ${projectId})`,
       LogType.PROJECT_UPDATE,
-      { projectId: projectId, projectTitle: updatedProject.title, changes: { title, teamMembers, components, summary, status, projectPhoto } }
+      {
+        adminEmail: session?.user?.email,
+        projectId: projectId,
+        projectTitle: updatedProject.title,
+        changes: { title, teamMembers, components, summary, status, projectPhoto },
+      }
     );
 
     return new Response(JSON.stringify(updatedProject), { status: 200 });
@@ -104,7 +109,7 @@ export async function DELETE(req, { params }) {
     await logAdminAction(
       `Project deleted: ${projectToDelete.title} (ID: ${projectId})`,
       LogType.PROJECT_DELETION,
-      { projectId: projectId, projectTitle: projectToDelete.title }
+      { adminEmail: session?.user?.email, projectId: projectId, projectTitle: projectToDelete.title }
     );
 
     return new Response(JSON.stringify({ message: "Project deleted successfully" }), { status: 200 });

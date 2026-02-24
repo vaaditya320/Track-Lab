@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { logAdminAction, LogType } from "@/lib/logger";
 
 export async function GET(req, { params }) {
   try {
@@ -46,6 +47,11 @@ export async function DELETE(req, { params }) {
 
     const project = await prisma.project.findUnique({
       where: { id },
+      select: {
+        id: true,
+        title: true,
+        leaderId: true,
+      },
     });
 
     if (!project) {
@@ -60,6 +66,17 @@ export async function DELETE(req, { params }) {
     await prisma.project.delete({
       where: { id },
     });
+
+    await logAdminAction(
+      `User ${session.user.name} (${session.user.email}) deleted their own project "${project.title}" (ID: ${id})`,
+      LogType.PROJECT_DELETION,
+      {
+        userId,
+        userEmail: session.user.email,
+        projectId: id,
+        projectTitle: project.title,
+      }
+    );
 
     return NextResponse.json({ message: 'Project deleted successfully' }, { status: 200 });
   } catch (error) {

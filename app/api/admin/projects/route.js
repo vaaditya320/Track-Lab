@@ -124,7 +124,14 @@ export async function PUT(req, { params }) {
 
     // Log the admin action
     await logAdminAction(
-      `Project "${projectBeforeUpdate.title}" updated by admin ${session.user.name} (${session.user.email}). Status changed from ${projectBeforeUpdate.status} to ${body.status || "PARTIAL"}`
+      `Project "${projectBeforeUpdate.title}" updated by admin ${session.user.name} (${session.user.email}). Status changed from ${projectBeforeUpdate.status} to ${body.status || "PARTIAL"}`,
+      LogType.PROJECT_UPDATE,
+      {
+        adminEmail: session?.user?.email,
+        projectId: id,
+        previous: projectBeforeUpdate,
+        next: { ...body, teamMembers: Array.isArray(body.teamMembers) ? body.teamMembers : undefined },
+      }
     );
 
     return new Response(JSON.stringify(updatedProject), { status: 200 });
@@ -159,7 +166,9 @@ export async function DELETE(req, { params }) {
 
     // Log the admin action
     await logAdminAction(
-      `Project "${projectToDelete.title}" (status: ${projectToDelete.status}) deleted by admin ${session.user.name} (${session.user.email})`
+      `Project "${projectToDelete.title}" (status: ${projectToDelete.status}) deleted by admin ${session.user.name} (${session.user.email})`,
+      LogType.PROJECT_DELETION,
+      { adminEmail: session?.user?.email, projectId: id, projectTitle: projectToDelete.title }
     );
 
     return new Response(JSON.stringify(deletedProject), { status: 200 });

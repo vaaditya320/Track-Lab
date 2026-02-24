@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { CloudWatchLogsClient, GetLogEventsCommand } from "@aws-sdk/client-cloudwatch-logs";
 import { isAdmin } from "@/lib/isAdmin";
-
-// Use the same log group name as in lib/logger.js
-const LOG_GROUP_NAME = 'Tracklab';
-const LOG_STREAM_NAME = 'Admin Actions';
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -16,40 +12,18 @@ export async function GET() {
   }
 
   try {
-    const client = new CloudWatchLogsClient({
-      region: process.env.AWS_REGION || 'ap-south-1',
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      },
+    const dbLogs = await prisma.adminLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 200,
     });
 
-    const command = new GetLogEventsCommand({
-      logGroupName: LOG_GROUP_NAME,
-      logStreamName: LOG_STREAM_NAME,
-      limit: 100, // Fetch last 100 log events
-      startFromHead: false, // Get most recent logs first
-    });
-
-    const response = await client.send(command);
-    
-    // Parse the log messages
-    const logs = response.events.map(event => {
-      try {
-        const parsedMessage = JSON.parse(event.message);
-        return {
-          message: parsedMessage.message,
-          timestamp: parsedMessage.timestamp,
-          eventId: event.eventId
-        };
-      } catch (e) {
-        return {
-          message: event.message,
-          timestamp: new Date(event.timestamp).toISOString(),
-          eventId: event.eventId
-        };
-      }
-    });
+    const logs = dbLogs.map((log) => ({
+      eventId: log.id,
+      timestamp: log.createdAt.toISOString(),
+      type: log.type,
+      message: log.message,
+      metadata: log.metadata,
+    }));
 
     return NextResponse.json({ logs });
   } catch (error) {

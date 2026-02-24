@@ -30,7 +30,7 @@ export async function GET(request) {
 
     await logAdminAction(
       `All users fetched by admin ${session.user.name}`,
-      LogType.OTHER,
+      LogType.USER_MANAGEMENT,
       { adminEmail: session.user.email }
     );
 
@@ -101,8 +101,8 @@ export async function PUT(request) {
     // Log the admin action
     await logAdminAction(
       `User ${userToUpdate.name} (${userToUpdate.email}) role changed from ${userToUpdate.role} to ${role} by admin ${session.user.name} (${session.user.email})`,
-      LogType.OTHER,
-      { adminEmail: session.user.email }
+      LogType.USER_MANAGEMENT,
+      { adminEmail: session.user.email, targetUserId: userId, previousRole: userToUpdate.role, newRole: role }
     );
 
     return NextResponse.json(updatedUser);
@@ -143,8 +143,8 @@ export async function DELETE(req) {
     // Log the admin action
     await logAdminAction(
       `User ${userToDelete.name} (${userToDelete.email}) (${userToDelete.role}) deleted by admin ${session.user.name} (${session.user.email})`,
-      LogType.OTHER,
-      { adminEmail: session.user.email }
+      LogType.USER_MANAGEMENT,
+      { adminEmail: session.user.email, targetUserId: id, role: userToDelete.role }
     );
 
     return new Response(JSON.stringify({ message: "User deleted successfully" }), { status: 200 });

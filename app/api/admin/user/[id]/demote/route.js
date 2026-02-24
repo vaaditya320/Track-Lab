@@ -70,7 +70,7 @@ export async function GET(request, { params }) {
     // Log the admin action
     await logAdminAction(
       `User ${userToDemote.name} (${userToDemote.email}) demoted from ${userToDemote.role} to ADMIN by ${session.user.name} (${session.user.email})`,
-      LogType.OTHER,
+      LogType.USER_MANAGEMENT,
       { 
         adminEmail: session.user.email,
         targetUserId: id,

@@ -71,6 +71,17 @@ model Overlord {
   updatedAt DateTime @updatedAt
 }
 
+model AdminLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  type      String   @default("OTHER")
+  message   String   @db.Text
+  metadata  Json?
+
+  @@index([createdAt])
+  @@index([type])
+}
+
 enum Status {
   PARTIAL
   SUBMITTED
