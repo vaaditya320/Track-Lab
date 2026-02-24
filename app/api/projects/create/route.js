@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
+import { logAdminAction, LogType } from "@/lib/logger";
 
 export async function POST(req) {
   const session = await getServerSession(authOptions);
@@ -30,6 +31,18 @@ export async function POST(req) {
         assignedTeacherId: assignedTeacherId || null,
       },
     });
+
+    await logAdminAction(
+      `Project created via /api/projects/create by user ${session.user.name} (${session.user.email}): "${project.title}" (ID: ${project.id})`,
+      LogType.PROJECT_CREATION,
+      {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        projectId: project.id,
+        projectTitle: project.title,
+        assignedTeacherId: assignedTeacherId || null,
+      }
+    );
 
     return new Response(JSON.stringify({ message: "Project created", project }), { status: 201 });
   } catch (error) {

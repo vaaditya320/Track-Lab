@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
+import { logAdminAction, LogType } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -87,6 +88,18 @@ export async function POST(request) {
         }
       }
     });
+
+    await logAdminAction(
+      `Project created by user ${session.user.name} (${session.user.email}): "${project.title}" (ID: ${project.id})`,
+      LogType.PROJECT_CREATION,
+      {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        projectId: project.id,
+        projectTitle: project.title,
+        assignedAdminId: assignedAdminId || null,
+      }
+    );
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

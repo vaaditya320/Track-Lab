@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { logAdminAction, LogType } from "@/lib/logger";
 
 // AWS S3 Configuration
 const s3 = new S3Client({
@@ -66,6 +67,15 @@ export async function POST(req, { params }) {
         status: "SUBMITTED",
       },
     });
+
+    await logAdminAction(
+      `Project completed/submitted: "${updatedProject.title}" (ID: ${updatedProject.id})`,
+      LogType.PROJECT_UPDATE,
+      {
+        projectId: updatedProject.id,
+        hasPhoto: Boolean(photoFilename || existingProject.projectPhoto),
+      }
+    );
 
     return NextResponse.json(updatedProject, { status: 200 });
 

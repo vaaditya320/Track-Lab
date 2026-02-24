@@ -29,6 +29,88 @@ export async function GET(req, { params }) {
   }
 }
 
+export async function PUT(req, { params }) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
+
+    if (!id) {
+      return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
+    }
+
+    const existing = await prisma.project.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        components: true,
+        teamMembers: true,
+        status: true,
+        leaderId: true,
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    if (existing.leaderId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (existing.status !== "PARTIAL") {
+      return NextResponse.json(
+        { error: "Only projects in PARTIAL state can be edited" },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json();
+    const { title, teamMembers, components } = body;
+
+    const updated = await prisma.project.update({
+      where: { id },
+      data: {
+        title: title ?? existing.title,
+        components: components ?? existing.components,
+        teamMembers:
+          typeof teamMembers === "string"
+            ? teamMembers
+            : teamMembers
+            ? JSON.stringify(teamMembers)
+            : existing.teamMembers,
+      },
+    });
+
+    await logAdminAction(
+      `User ${session.user.name} (${session.user.email}) updated their project "${updated.title}" (ID: ${updated.id}) while in PARTIAL state`,
+      LogType.PROJECT_UPDATE,
+      {
+        userId: session.user.id,
+        userEmail: session.user.email,
+        projectId: updated.id,
+        before: existing,
+        after: {
+          title: updated.title,
+          components: updated.components,
+          teamMembers: updated.teamMembers,
+        },
+      }
+    );
+
+    return NextResponse.json(updated, { status: 200 });
+  } catch (error) {
+    console.error("Error updating project:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function DELETE(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
