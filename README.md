@@ -26,21 +26,37 @@ cd TrackLab
 Inside the project root, create a .env file and add your credentials:
 
 ```bash
-# Database
-DATABASE_URL=your_postgresql_database_url
+# Environment Variables (.env.example)
 
-# Google OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-NEXTAUTH_SECRET=your_nextauth_secret
+## Database
+DATABASE_URL=postgres://<username>:<password>@<host>:<port>/<database>?sslmode=require
 
-# Email Configuration
-EMAIL_FROM=your_email@example.com
-GMAIL_APP_PASSWORD=your_gmail_app_password
+## App Configuration
+BASE_URL=http://localhost:3000
+NODE_ENV=development
 
-# AWS S3 (For Future Storage)
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+## Authentication (NextAuth)
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<your_nextauth_secret>
+
+## Google OAuth
+GOOGLE_CLIENT_ID=<your_google_client_id>
+GOOGLE_CLIENT_SECRET=<your_google_client_secret>
+
+## Email Configuration
+EMAIL_FROM=<your_email@example.com>
+GMAIL_APP_PASSWORD=<your_gmail_app_password>
+
+## AWS S3 Configuration
+AWS_REGION=ap-south-1
+AWS_ACCESS_KEY_ID=<your_aws_access_key_id>
+AWS_SECRET_ACCESS_KEY=<your_aws_secret_access_key>
+
+## Brevo (Sendinblue) API
+BREVO_API_KEY=<your_brevo_api_key>
+
+## Feature Flags
+IS_DOWN=false
 ```
 ### 3️⃣ Install Dependencies
 ```bash
