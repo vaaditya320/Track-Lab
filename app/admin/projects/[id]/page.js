@@ -15,6 +15,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import GroupIcon from "@mui/icons-material/Group";
 import BuildIcon from "@mui/icons-material/Build";
+import ProjectPublicLinkButton from "@/app/components/ProjectPublicLinkButton";
 
 // Skeleton component for loading state
 const ProjectDetailsSkeleton = () => {
@@ -198,24 +199,36 @@ export default function ProjectDetails() {
       transition={{ duration: 0.6 }}
     >
       <Container maxWidth="md" sx={{ py: 4 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3, alignItems: "center" }}>
-          <Button 
-            variant="contained" 
-            startIcon={<ArrowBackIcon />} 
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            mb: 3,
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
+          <Button
+            variant="contained"
+            startIcon={<ArrowBackIcon />}
             onClick={() => router.push("/admin")}
           >
             Back to Dashboard
           </Button>
-          
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<DownloadIcon />}
-            onClick={handleDownload}
-            disabled={downloading}
-          >
-            {downloading ? "Sending..." : "Download Summary"}
-          </Button>
+
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "flex-end" }}>
+            <ProjectPublicLinkButton projectId={id} />
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<DownloadIcon />}
+              onClick={handleDownload}
+              disabled={downloading}
+            >
+              {downloading ? "Sending..." : "Download Summary"}
+            </Button>
+          </Box>
         </Box>
 
         <Card 
