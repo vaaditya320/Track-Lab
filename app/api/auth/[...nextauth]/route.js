@@ -1,6 +1,7 @@
-import NextAuth from "next-auth"; 
+import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
+import { resolveRegIdFromPoornimaEmailLocalPart } from "@/lib/poornimaRegId";
 
 export const authOptions = {
   providers: [
@@ -24,7 +25,9 @@ export const authOptions = {
 
   callbacks: {
     async signIn({ user }) {
-      const isPoornimaEmail = user.email.endsWith("@poornima.org");
+      const isPoornimaEmail = user.email
+        .toLowerCase()
+        .endsWith("@poornima.org");
       
       // If not a poornima.org email, check overlords list
       if (!isPoornimaEmail) {
@@ -48,11 +51,17 @@ export const authOptions = {
         });
 
         if (!existingUser) {
+          const emailLower = user.email.toLowerCase();
+          const localPart = user.email.split("@")[0];
+          const regId = emailLower.endsWith("@poornima.org")
+            ? resolveRegIdFromPoornimaEmailLocalPart(localPart)
+            : localPart;
+
           existingUser = await prisma.user.create({
             data: {
               name: user.name,
               email: user.email,
-              regId: user.email.split("@")[0], // Extract reg ID from email
+              regId,
             },
           });
         }

@@ -30,6 +30,7 @@ import {
   useTheme,
   Autocomplete,
   Chip,
+  Avatar,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -102,17 +103,41 @@ const CreateProjectSkeleton = () => {
   );
 };
 
+function formatMemberLabel(u) {
+  if (!u?.name) return u?.regId || "";
+  const rid = (u.regId || "").trim();
+  return rid ? `${u.name.trim()} ${rid}` : u.name.trim();
+}
+
+function memberSearchInitials(name) {
+  if (!name?.trim()) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function memberAvatarColor(name) {
+  const s = name || "?";
+  let hash = 0;
+  for (let i = 0; i < s.length; i += 1) {
+    hash = s.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h} 55% 42%)`;
+}
+
 /** Pick a registered student (User) — options load from `/api/users/search`. */
 function TeamMemberAutocomplete({ value, onChange, label, excludeIds = [], required }) {
+  const theme = useTheme();
   const [inputValue, setInputValue] = useState(() =>
-    value ? `${value.name} (${value.regId})` : ""
+    value ? formatMemberLabel(value) : ""
   );
   const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef(null);
 
   useEffect(() => {
-    if (value) setInputValue(`${value.name} (${value.regId})`);
+    if (value) setInputValue(formatMemberLabel(value));
     else setInputValue("");
   }, [value]);
 
@@ -154,31 +179,156 @@ function TeamMemberAutocomplete({ value, onChange, label, excludeIds = [], requi
         if (reason === "input") setInputValue(newInput);
         if (reason === "clear") setInputValue("");
         if (reason === "reset" && value) {
-          setInputValue(`${value.name} (${value.regId})`);
+          setInputValue(formatMemberLabel(value));
         }
       }}
       options={options}
       loading={loading}
-      getOptionLabel={(opt) => (opt ? `${opt.name} (${opt.regId})` : "")}
+      getOptionLabel={(opt) => (opt ? formatMemberLabel(opt) : "")}
       isOptionEqualToValue={(a, b) => a?.id === b?.id}
       filterOptions={(x) => x}
+      slotProps={{
+        paper: {
+          elevation: 0,
+          sx: {
+            mt: 0.75,
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: "divider",
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 8px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)"
+                : "0 8px 24px rgba(60,64,67,0.28), 0 0 0 1px rgba(60,64,67,0.08)",
+            overflow: "hidden",
+            minWidth: 320,
+          },
+        },
+        listbox: {
+          sx: {
+            py: 0.75,
+            px: 0.5,
+            maxHeight: 320,
+            "& .MuiAutocomplete-option": {
+              px: 0,
+              py: 0,
+              minHeight: 0,
+            },
+          },
+        },
+      }}
+      renderOption={(props, option) => {
+        const { key, ...liProps } = props;
+        const name = option.name?.trim() || "—";
+        const rid = (option.regId || "").trim();
+        return (
+          <Box
+            component="li"
+            key={key}
+            {...liProps}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              px: 1,
+              py: 1,
+              mx: 0.25,
+              my: 0.125,
+              borderRadius: 1.5,
+              cursor: "pointer",
+              transition: "background-color 0.12s ease",
+              "&:hover": { bgcolor: "action.hover" },
+              '&.Mui-focused, &[aria-selected="true"]': {
+                bgcolor: "action.selected",
+              },
+            }}
+          >
+            <Avatar
+              sx={{
+                width: 40,
+                height: 40,
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                bgcolor: memberAvatarColor(name),
+                color: "common.white",
+                flexShrink: 0,
+              }}
+            >
+              {memberSearchInitials(name)}
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                noWrap
+                sx={{ lineHeight: 1.35, color: "text.primary" }}
+              >
+                {name}
+              </Typography>
+              {rid ? (
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{
+                    display: "block",
+                    mt: 0.25,
+                    color: "text.secondary",
+                    fontFamily:
+                      'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {rid}
+                </Typography>
+              ) : null}
+            </Box>
+          </Box>
+        );
+      }}
       noOptionsText={
-        inputValue.trim().length < 2
-          ? "Start typing to search"
-          : "No registered students found"
+        <Box sx={{ py: 2, px: 1, textAlign: "center" }}>
+          <Typography variant="body2" color="text.secondary">
+            {inputValue.trim().length < 2
+              ? "Type at least 2 characters to search"
+              : "No students match your search"}
+          </Typography>
+        </Box>
+      }
+      loadingText={
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1.5, px: 1 }}>
+          <CircularProgress size={20} thickness={4} />
+          <Typography variant="body2" color="text.secondary">
+            Searching…
+          </Typography>
+        </Box>
       }
       renderInput={(params) => (
         <TextField
           {...params}
           label={label}
           required={required}
-          placeholder="Search by name or registration ID"
+          placeholder="Search people"
           size="small"
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: 2,
+              bgcolor: theme.palette.mode === "dark" ? "action.hover" : "grey.50",
+              transition: theme.transitions.create(["box-shadow", "background-color"], {
+                duration: theme.transitions.duration.shorter,
+              }),
+              "&:hover": {
+                bgcolor: theme.palette.mode === "dark" ? "action.selected" : "grey.100",
+              },
+              "&.Mui-focused": {
+                bgcolor: "background.paper",
+                boxShadow: `0 1px 2px 0 rgba(60,64,67,0.3), 0 2px 6px 2px rgba(60,64,67,0.15)`,
+              },
+            },
+          }}
           InputProps={{
             ...params.InputProps,
             startAdornment: (
               <>
-                <SearchIcon sx={{ ml: 0.5, mr: 0.5, color: "text.secondary" }} />
+                <SearchIcon sx={{ ml: 0.75, mr: 0.25, color: "text.secondary", fontSize: 22 }} />
                 {params.InputProps.startAdornment}
               </>
             ),
