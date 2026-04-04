@@ -4,7 +4,45 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { logAdminAction, LogType } from "@/lib/logger";
 import { isAdmin } from "@/lib/isAdmin";
 
-// GET all projects
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+function buildWhere(url) {
+  const search = (url.searchParams.get("search") || "").trim();
+  const leader = (url.searchParams.get("leader") || "").trim();
+  const status = (url.searchParams.get("status") || "").trim();
+  const batch = (url.searchParams.get("batch") || "").trim();
+
+  const and = [];
+  if (status === "PARTIAL" || status === "SUBMITTED") {
+    and.push({ status });
+  }
+
+  const leaderParts = [];
+  if (batch) leaderParts.push({ batch });
+  if (leader.length > 0) {
+    leaderParts.push({
+      name: { contains: leader, mode: "insensitive" },
+    });
+  }
+  if (leaderParts.length === 1) {
+    and.push({ leader: leaderParts[0] });
+  } else if (leaderParts.length > 1) {
+    and.push({ leader: { AND: leaderParts } });
+  }
+
+  if (search.length > 0) {
+    and.push({
+      OR: [
+        { title: { contains: search, mode: "insensitive" } },
+        { leader: { name: { contains: search, mode: "insensitive" } } },
+      ],
+    });
+  }
+  return and.length ? { AND: and } : {};
+}
+
+// GET projects (paginated + server-side filters; default latest first by id)
 export async function GET(req) {
   const session = await getServerSession(authOptions);
 
@@ -13,33 +51,39 @@ export async function GET(req) {
   }
 
   try {
-    const projects = await prisma.project.findMany({
+    const url = new URL(req.url);
+    let take = parseInt(url.searchParams.get("take") || String(DEFAULT_PAGE_SIZE), 10);
+    if (Number.isNaN(take) || take < 1) take = DEFAULT_PAGE_SIZE;
+    take = Math.min(take, MAX_PAGE_SIZE);
+    let skip = parseInt(url.searchParams.get("skip") || "0", 10);
+    if (Number.isNaN(skip) || skip < 0) skip = 0;
+
+    const where = buildWhere(url);
+
+    const rows = await prisma.project.findMany({
+      where,
+      skip,
+      take: take + 1,
+      orderBy: { id: "desc" },
       include: {
         leader: {
-          select: { 
+          select: {
             name: true,
-            batch: true 
+            batch: true,
           },
         },
       },
     });
 
-    // await logAdminAction(
-    //   `All projects fetched by admin ${session.user.name}`,
-    //   LogType.OTHER,
-    //   { adminEmail: session.user.email }
-    // );
+    const hasMore = rows.length > take;
+    const slice = hasMore ? rows.slice(0, take) : rows;
+    const items = slice.map((project) => ({
+      ...project,
+      leaderName: project.leader.name,
+      leaderBatch: project.leader.batch,
+    }));
 
-    return new Response(
-      JSON.stringify(
-        projects.map((project) => ({
-          ...project,
-          leaderName: project.leader.name,
-          leaderBatch: project.leader.batch,
-        }))
-      ),
-      { status: 200 }
-    );
+    return new Response(JSON.stringify({ items, hasMore }), { status: 200 });
   } catch (error) {
     console.error("Error fetching projects:", error);
     return new Response(

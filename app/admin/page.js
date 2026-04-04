@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -23,6 +23,21 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import StarIcon from '@mui/icons-material/Star';
 import { isSuperAdmin } from "@/lib/isSuperAdmin";
+
+const PAGE_SIZE = 20;
+
+function buildProjectListParams({ skip, debouncedSearch, debouncedLeader, filter }) {
+  const params = new URLSearchParams();
+  params.set("take", String(PAGE_SIZE));
+  params.set("skip", String(skip));
+  const q = debouncedSearch.trim();
+  if (q.length >= 2) params.set("search", q);
+  const l = debouncedLeader.trim();
+  if (l.length > 0) params.set("leader", l);
+  if (filter.status) params.set("status", filter.status);
+  if (filter.batch) params.set("batch", filter.batch);
+  return params;
+}
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
@@ -228,7 +243,7 @@ const Forbidden403 = ({ isSignedIn }) => {
 };
 
 // Project Details Dialog Component
-const ProjectDetailsDialog = ({ open, project, onClose, onDelete, loading }) => {
+const ProjectDetailsDialog = ({ open, project, onClose, onRequestDelete, loading }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
@@ -319,7 +334,7 @@ const ProjectDetailsDialog = ({ open, project, onClose, onDelete, loading }) => 
         <Button 
           onClick={(e) => { 
             e.stopPropagation(); 
-            onDelete(project.id);
+            onRequestDelete(project);
           }}
           color="error" 
           variant="contained"
@@ -335,29 +350,61 @@ const ProjectDetailsDialog = ({ open, project, onClose, onDelete, loading }) => 
 };
 
 // Confirmation Dialog for delete operations
-const DeleteConfirmationDialog = ({ open, onClose, onConfirm, multiple, loading }) => {
+const DeleteConfirmationDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  multiple,
+  projectTitle,
+  loading,
+}) => {
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Confirm Deletion</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={loading ? undefined : onClose}
+      maxWidth="xs"
+      fullWidth
+      sx={{
+        "& .MuiBackdrop-root": { backdropFilter: "blur(4px)" },
+      }}
+      PaperProps={{
+        sx: (theme) => ({
+          borderRadius: 3,
+          boxShadow: theme.shadows[8],
+        }),
+      }}
+    >
+      <DialogTitle component="div" sx={{ fontWeight: 700, pb: 1 }}>
+        {multiple ? "Delete selected projects?" : "Delete Project?"}
+      </DialogTitle>
       <DialogContent>
-        <DialogContentText>
-          {multiple 
-            ? "Are you sure you want to delete all selected projects? This action cannot be undone."
-            : "Are you sure you want to delete this project? This action cannot be undone."}
+        <DialogContentText component="div" sx={{ color: "text.secondary" }}>
+          {multiple ? (
+            "Are you sure you want to delete all selected projects? This action cannot be undone."
+          ) : (
+            <>
+              Are you sure you want to delete the project{" "}
+              <Box component="span" sx={{ fontWeight: 700, color: "text.primary" }}>
+                {projectTitle || "this project"}
+              </Box>
+              ? This action cannot be undone.
+            </>
+          )}
         </DialogContentText>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="primary">
+      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+        <Button onClick={onClose} color="primary" disabled={loading}>
           Cancel
         </Button>
-        <Button 
-          onClick={onConfirm} 
-          color="error" 
+        <Button
+          onClick={onConfirm}
+          color="error"
           variant="contained"
           disabled={loading}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+          sx={{ borderRadius: 999 }}
         >
-          {loading ? "Deleting..." : "Delete"}
+          {loading ? "Deleting…" : "Delete"}
         </Button>
       </DialogActions>
     </Dialog>
@@ -371,9 +418,13 @@ export default function AdminPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [projects, setProjects] = useState([]);
-  const [filteredProjects, setFilteredProjects] = useState([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const firstAuthFetchDone = useRef(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedLeader, setDebouncedLeader] = useState("");
   const [loadingProjectId, setLoadingProjectId] = useState(null);
   const [filter, setFilter] = useState({ leader: "", status: "", search: "", batch: "" });
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
@@ -385,7 +436,12 @@ export default function AdminPage() {
   
   // Mobile specific states
   const [detailsDialog, setDetailsDialog] = useState({ open: false, project: null });
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, multiple: false });
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    multiple: false,
+    projectId: null,
+    projectTitle: null,
+  });
   const [mobileSelectionMode, setMobileSelectionMode] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState(null);
 
@@ -393,50 +449,78 @@ export default function AdminPage() {
   const hasSpecialAccess = isSuperAdmin(session);
 
   useEffect(() => {
-    // Only proceed when authentication status is determined
-    if (status === "loading") return;
-    
-    if (status === "authenticated") {
-      checkAdminAndFetchProjects();
-    } else {
-      // User is not authenticated
-      setInitialLoading(false);
-      setAdminChecked(true);
-    }
-  }, [status]);
-
-  const checkAdminAndFetchProjects = async () => {
-    setInitialLoading(true);
-    try {
-      const response = await axios.get("/api/admin/projects", {
-        headers: { Authorization: `Bearer ${session.user.id}` },
-      });
-      setProjects(response.data);
-      setFilteredProjects(response.data);
-      setAdminChecked(true);
-    } catch (error) {
-      if (error.response && error.response.status === 403) {
-        setForbidden(true);
-        setAdminChecked(true);
-      } else {
-        setError("Failed to fetch projects");
-        console.error(error);
-        setAdminChecked(true);
-      }
-    } finally {
-      setInitialLoading(false);
-    }
-  };
+    const t = setTimeout(() => setDebouncedSearch(filter.search), 350);
+    return () => clearTimeout(t);
+  }, [filter.search]);
 
   useEffect(() => {
-    const filtered = projects.filter(project =>
-      (filter.leader ? project.leaderName.toLowerCase().includes(filter.leader.toLowerCase()) : true) &&
-      (filter.status ? project.status.toLowerCase() === filter.status.toLowerCase() : true) &&
-      (filter.search ? project.title.toLowerCase().includes(filter.search.toLowerCase()) || project.leaderName.toLowerCase().includes(filter.search.toLowerCase()) : true) &&
-      (filter.batch ? project.leaderBatch === filter.batch : true)
-    );
-    setFilteredProjects(filtered);
-  }, [filter, projects]);
+    const t = setTimeout(() => setDebouncedLeader(filter.leader), 350);
+    return () => clearTimeout(t);
+  }, [filter.leader]);
+
+  const fetchFirstPage = useCallback(async () => {
+    if (!session?.user?.id) return;
+    const params = buildProjectListParams({
+      skip: 0,
+      debouncedSearch,
+      debouncedLeader,
+      filter,
+    });
+    const response = await axios.get(`/api/admin/projects?${params}`, {
+      headers: { Authorization: `Bearer ${session.user.id}` },
+    });
+    setProjects(response.data.items);
+    setHasMore(response.data.hasMore);
+    setSelectAll(false);
+    setSelectedProjects([]);
+  }, [session?.user?.id, debouncedSearch, debouncedLeader, filter.status, filter.batch]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (status !== "authenticated" || !session?.user?.id) {
+      firstAuthFetchDone.current = false;
+      setProjects([]);
+      setHasMore(false);
+      setInitialLoading(false);
+      setAdminChecked(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      if (firstAuthFetchDone.current) setLoading(true);
+      else setInitialLoading(true);
+      setError("");
+      try {
+        await fetchFirstPage();
+        if (cancelled) return;
+        setForbidden(false);
+        setAdminChecked(true);
+        firstAuthFetchDone.current = true;
+      } catch (error) {
+        if (cancelled) return;
+        if (error.response && error.response.status === 403) {
+          setForbidden(true);
+          setAdminChecked(true);
+        } else {
+          setError("Failed to fetch projects");
+          console.error(error);
+          setAdminChecked(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setInitialLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status, session?.user?.id, fetchFirstPage]);
   
   // Clean up any hanging timers when component unmounts
   useEffect(() => {
@@ -450,11 +534,7 @@ export default function AdminPage() {
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/api/admin/projects", {
-        headers: { Authorization: `Bearer ${session.user.id}` },
-      });
-      setProjects(response.data);
-      setFilteredProjects(response.data);
+      await fetchFirstPage();
     } catch (error) {
       if (error.response && error.response.status === 403) {
         setForbidden(true);
@@ -467,6 +547,41 @@ export default function AdminPage() {
     }
   };
 
+  const loadMore = useCallback(async () => {
+    if (!session?.user?.id || !hasMore || loadingMore || loading) return;
+    setLoadingMore(true);
+    try {
+      const params = buildProjectListParams({
+        skip: projects.length,
+        debouncedSearch,
+        debouncedLeader,
+        filter,
+      });
+      const response = await axios.get(`/api/admin/projects?${params}`, {
+        headers: { Authorization: `Bearer ${session.user.id}` },
+      });
+      setProjects((prev) => [...prev, ...response.data.items]);
+      setHasMore(response.data.hasMore);
+    } catch (error) {
+      if (error.response && error.response.status === 403) {
+        setForbidden(true);
+      } else {
+        setToast({ open: true, message: "Failed to load more projects", severity: "error" });
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    session?.user?.id,
+    hasMore,
+    loadingMore,
+    loading,
+    projects.length,
+    debouncedSearch,
+    debouncedLeader,
+    filter,
+  ]);
+
   const handleDeleteProject = async (projectId) => {
     setLoadingProjectId(projectId);
     try {
@@ -474,9 +589,8 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${session.user.id}` },
       });
       setToast({ open: true, message: "Project deleted successfully", severity: "success" });
-      // Close the details dialog immediately after deletion
       setDetailsDialog({ open: false, project: null });
-      // Refresh the projects list
+      setDeleteDialog({ open: false, multiple: false, projectId: null, projectTitle: null });
       await fetchProjects();
     } catch (error) {
       if (error.response && error.response.status === 403) {
@@ -505,7 +619,7 @@ export default function AdminPage() {
       await fetchProjects();
       setMobileSelectionMode(false);
       // Close the delete confirmation dialog after deletion
-      setDeleteDialog({ open: false, multiple: false });
+      setDeleteDialog({ open: false, multiple: false, projectId: null, projectTitle: null });
     } catch (error) {
       if (error.response && error.response.status === 403) {
         setForbidden(true);
@@ -527,7 +641,7 @@ export default function AdminPage() {
     if (selectAll) {
       setSelectedProjects([]);
     } else {
-      setSelectedProjects(filteredProjects.map(project => project.id));
+      setSelectedProjects(projects.map((project) => project.id));
     }
     setSelectAll(!selectAll);
   };
@@ -818,6 +932,11 @@ export default function AdminPage() {
                 value={filter.search}
                 name="search"
                 onChange={handleFilterChange}
+                helperText={
+                  filter.search.trim().length === 1
+                    ? "Type at least 2 characters to search"
+                    : undefined
+                }
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -921,7 +1040,12 @@ export default function AdminPage() {
                 color="error"
                 onClick={() => {
                   if (selectedProjects.length > 0) {
-                    setDeleteDialog({ open: true, multiple: true });
+                    setDeleteDialog({
+                      open: true,
+                      multiple: true,
+                      projectId: null,
+                      projectTitle: null,
+                    });
                   }
                 }}
                 disabled={selectedProjects.length === 0}
@@ -951,7 +1075,7 @@ export default function AdminPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredProjects.map((project, index) => (
+                  {projects.map((project, index) => (
                     <TableRow 
                       key={project.id} 
                       onClick={(e) => handleRowClick(e, project)}
@@ -1001,14 +1125,19 @@ export default function AdminPage() {
                             color="error" 
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteProject(project.id);
+                              setDeleteDialog({
+                                open: true,
+                                multiple: false,
+                                projectId: project.id,
+                                projectTitle: project.title,
+                              });
                             }}
-                            disabled={loadingProjectId === project.id}
-                          >
-                            {loadingProjectId === project.id ? 
-                              <CircularProgress size={24} color="inherit" /> : 
-                              "Delete"
+                            disabled={
+                              Boolean(loadingProjectId) ||
+                              (deleteDialog.open && deleteDialog.projectId === project.id)
                             }
+                          >
+                            Delete
                           </Button>
                         </TableCell>
                       )}
@@ -1017,9 +1146,22 @@ export default function AdminPage() {
                 </TableBody>
               </Table>
             </TableContainer>
+
+            {hasMore && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={loadMore}
+                  disabled={loadingMore || loading}
+                  startIcon={loadingMore ? <CircularProgress size={18} /> : null}
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
+                </Button>
+              </Box>
+            )}
             
             {/* Empty state */}
-            {filteredProjects.length === 0 && !loading && (
+            {projects.length === 0 && !loading && !initialLoading && (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body1" color="text.secondary">
                   No projects found matching your filters.
@@ -1034,22 +1176,42 @@ export default function AdminPage() {
           open={detailsDialog.open}
           project={detailsDialog.project}
           onClose={() => setDetailsDialog({ open: false, project: null })}
-          onDelete={handleDeleteProject}
+          onRequestDelete={(proj) => {
+            setDetailsDialog({ open: false, project: null });
+            setDeleteDialog({
+              open: true,
+              multiple: false,
+              projectId: proj.id,
+              projectTitle: proj.title,
+            });
+          }}
           loading={loading || loadingProjectId === detailsDialog.project?.id}
         />
         
         <DeleteConfirmationDialog
-        open={deleteDialog.open}
-        onClose={() => setDeleteDialog({ open: false, multiple: false })}
-        onConfirm={() => {
+          open={deleteDialog.open}
+          onClose={() =>
+            setDeleteDialog({
+              open: false,
+              multiple: false,
+              projectId: null,
+              projectTitle: null,
+            })
+          }
+          onConfirm={() => {
             if (deleteDialog.multiple) {
               handleDeleteSelected();
-            } else {
+            } else if (deleteDialog.projectId) {
               handleDeleteProject(deleteDialog.projectId);
             }
           }}
-        multiple={deleteDialog.multiple}
-        loading={loading}
+          multiple={deleteDialog.multiple}
+          projectTitle={deleteDialog.projectTitle}
+          loading={
+            deleteDialog.multiple
+              ? loading
+              : loadingProjectId === deleteDialog.projectId
+          }
         />
         <Snackbar
           open={toast.open}
