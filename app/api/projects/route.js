@@ -17,17 +17,20 @@ export async function GET() {
 
     const projects = await prisma.project.findMany({
       where: {
-        leaderId: session.user.id
+        OR: [
+          { leaderId: session.user.id },
+          { members: { some: { userId: session.user.id } } },
+        ],
       },
       include: {
         leader: {
           select: {
             name: true,
             email: true,
-            regId: true
-          }
-        }
-      }
+            regId: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json(projects);

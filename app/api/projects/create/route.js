@@ -11,25 +11,85 @@ export async function POST(req) {
   }
 
   try {
-    const { title, teamMembers, components, assignedTeacherId } = await req.json();
+    const body = await req.json();
+    const { title, components, assignedTeacherId, teamMemberIds } = body;
 
-    if (!title || !teamMembers || !components) {
+    if (!title || components === undefined || components === null) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 });
     }
 
-    // Convert teamMembers string to array if it's a string
-    const teamMembersArray = typeof teamMembers === 'string' 
-      ? teamMembers.split(',').map(member => member.trim())
-      : teamMembers;
+    if (!Array.isArray(teamMemberIds)) {
+      return new Response(
+        JSON.stringify({ error: "teamMemberIds must be an array of user ids" }),
+        { status: 400 }
+      );
+    }
 
-    const project = await prisma.project.create({
-      data: {
-        title,
-        leaderId: session.user.id,
-        teamMembers: JSON.stringify(teamMembersArray),
-        components,
-        assignedTeacherId: assignedTeacherId || null,
-      },
+    const rawIds = teamMemberIds.filter(
+      (x) => typeof x === "string" && x.length > 0
+    );
+    const uniqueIds = [...new Set(rawIds)];
+    if (uniqueIds.length !== rawIds.length) {
+      return new Response(JSON.stringify({ error: "Duplicate team member ids" }), { status: 400 });
+    }
+
+    for (const uid of uniqueIds) {
+      if (uid === session.user.id) {
+        return new Response(
+          JSON.stringify({ error: "You cannot add yourself as a team member" }),
+          { status: 400 }
+        );
+      }
+    }
+
+    let memberUsers = [];
+    if (uniqueIds.length > 0) {
+      memberUsers = await prisma.user.findMany({
+        where: {
+          id: { in: uniqueIds },
+          role: "STUDENT",
+        },
+        select: { id: true, name: true, regId: true },
+      });
+
+      if (memberUsers.length !== uniqueIds.length) {
+        return new Response(
+          JSON.stringify({
+            error: "One or more team members are invalid or not registered students",
+          }),
+          { status: 400 }
+        );
+      }
+    }
+
+    const teamMembersJson = JSON.stringify(
+      memberUsers.map((u) => `${u.name} (${u.regId})`)
+    );
+
+    const componentsStr =
+      typeof components === "string" ? components : String(components);
+
+    const project = await prisma.$transaction(async (tx) => {
+      const p = await tx.project.create({
+        data: {
+          title,
+          leaderId: session.user.id,
+          teamMembers: teamMembersJson,
+          components: componentsStr,
+          assignedTeacherId: assignedTeacherId || null,
+        },
+      });
+
+      if (uniqueIds.length > 0) {
+        await tx.projectMember.createMany({
+          data: uniqueIds.map((userId) => ({
+            projectId: p.id,
+            userId,
+          })),
+        });
+      }
+
+      return p;
     });
 
     await logAdminAction(

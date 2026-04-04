@@ -26,7 +26,14 @@ import ProjectStatsCard from "./components/ProjectStatsCard";
 import DashboardSkeleton from "./components/DashboardSkeleton";
 
 // Project table component with responsive design
-const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, handleSubmitProject, handleDeleteClick }) => {
+const ProjectsTable = ({
+  projects,
+  currentUserId,
+  loadingProjectId,
+  handleDownloadSummary,
+  handleSubmitProject,
+  handleDeleteClick,
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [selectedProject, setSelectedProject] = useState(null);
@@ -70,7 +77,9 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
             </TableRow>
           </TableHead>
           <TableBody>
-            {projects.map((project, index) => (
+            {projects.map((project, index) => {
+              const isLeader = project.leaderId === currentUserId;
+              return (
               <TableRow 
                 key={project.id} 
                 hover
@@ -83,9 +92,14 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
               >
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>
-                  <Typography variant="body1" fontWeight={500}>
-                    {project.title}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <Typography variant="body1" fontWeight={500}>
+                      {project.title}
+                    </Typography>
+                    {!isLeader && (
+                      <Chip label="Team member" size="small" variant="outlined" sx={{ borderRadius: 2 }} />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell>
                   <ProjectStatusBadge status={project.status} />
@@ -93,68 +107,83 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                 {!isMobile && (
                   <>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title="Download project summary">
-                          <span>
+                      {isLeader ? (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Download project summary">
+                            <span>
+                              <Button
+                                variant="outlined"
+                                color="primary"
+                                size="small"
+                                startIcon={loadingProjectId === project.id ? 
+                                  <CircularProgress size={16} color="inherit" /> : 
+                                  <DownloadIcon />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownloadSummary(project.id);
+                                }}
+                                disabled={loadingProjectId === project.id}
+                                sx={{ borderRadius: 4 }}
+                              >
+                                Summary
+                              </Button>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Delete project">
                             <Button
                               variant="outlined"
-                              color="primary"
+                              color="error"
                               size="small"
-                              startIcon={loadingProjectId === project.id ? 
-                                <CircularProgress size={16} color="inherit" /> : 
-                                <DownloadIcon />}
-                              onClick={() => handleDownloadSummary(project.id)}
-                              disabled={loadingProjectId === project.id}
+                              startIcon={<DeleteIcon />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(project);
+                              }}
                               sx={{ borderRadius: 4 }}
                             >
-                              Summary
+                              Delete
                             </Button>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Delete project">
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            startIcon={<DeleteIcon />}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(project);
-                            }}
-                            sx={{ borderRadius: 4 }}
-                          >
-                            Delete
-                          </Button>
-                        </Tooltip>
-                      </Box>
+                          </Tooltip>
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">View only</Typography>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {project.status === "PARTIAL" ? (
-                        <Tooltip title="Submit your project">
-                          <Button
-                            variant="contained"
-                            color="primary"
+                      {isLeader ? (
+                        project.status === "PARTIAL" ? (
+                          <Tooltip title="Submit your project">
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="small"
+                              startIcon={<SendIcon />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSubmitProject(project.id);
+                              }}
+                              sx={{ borderRadius: 4 }}
+                            >
+                              Submit
+                            </Button>
+                          </Tooltip>
+                        ) : (
+                          <Chip 
+                            label="Submitted" 
+                            color="success" 
                             size="small"
-                            startIcon={<SendIcon />}
-                            onClick={() => handleSubmitProject(project.id)}
                             sx={{ borderRadius: 4 }}
-                          >
-                            Submit
-                          </Button>
-                        </Tooltip>
+                          />
+                        )
                       ) : (
-                        <Chip 
-                          label="Submitted" 
-                          color="success" 
-                          size="small"
-                          sx={{ borderRadius: 4 }}
-                        />
+                        <Typography variant="body2" color="text.secondary">—</Typography>
                       )}
                     </TableCell>
                   </>
                 )}
               </TableRow>
-            ))}
+            );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -172,7 +201,9 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
           },
         }}
       >
-        {selectedProject && (
+        {selectedProject && (() => {
+          const isLeader = selectedProject.leaderId === currentUserId;
+          return (
           <>
             <DialogTitle 
               sx={{ 
@@ -201,6 +232,9 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                 <Typography variant="h6" fontWeight={500}>
                   {selectedProject.title}
                 </Typography>
+                {!isLeader && (
+                  <Chip label="Team member — view only" size="small" variant="outlined" sx={{ mt: 1 }} />
+                )}
               </Box>
               
               <Box sx={{ mb: 3 }}>
@@ -212,74 +246,84 @@ const ProjectsTable = ({ projects, loadingProjectId, handleDownloadSummary, hand
                 </Box>
               </Box>
               
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Actions
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    startIcon={loadingProjectId === selectedProject.id ? 
-                      <CircularProgress size={16} color="inherit" /> : 
-                      <DownloadIcon />}
-                    onClick={() => {
-                      handleDownloadSummary(selectedProject.id);
-                      handleCloseDetails();
-                    }}
-                    disabled={loadingProjectId === selectedProject.id}
-                    sx={{ borderRadius: 4 }}
-                  >
-                    Download Summary
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => {
-                      handleDeleteClick(selectedProject);
-                      handleCloseDetails();
-                    }}
-                    sx={{ borderRadius: 4 }}
-                  >
-                    Delete
-                  </Button>
+              {isLeader && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Actions
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      startIcon={loadingProjectId === selectedProject.id ? 
+                        <CircularProgress size={16} color="inherit" /> : 
+                        <DownloadIcon />}
+                      onClick={() => {
+                        handleDownloadSummary(selectedProject.id);
+                        handleCloseDetails();
+                      }}
+                      disabled={loadingProjectId === selectedProject.id}
+                      sx={{ borderRadius: 4 }}
+                    >
+                      Download Summary
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => {
+                        handleDeleteClick(selectedProject);
+                        handleCloseDetails();
+                      }}
+                      sx={{ borderRadius: 4 }}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
+              )}
+              {!isLeader && (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  Only the project leader can submit, download the summary, or delete this project.
+                </Alert>
+              )}
             </DialogContent>
             <DialogActions sx={{ px: 3, py: 2 }}>
-              {selectedProject.status === "PARTIAL" ? (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  startIcon={<SendIcon />}
-                  onClick={() => {
-                    handleSubmitProject(selectedProject.id);
-                    handleCloseDetails();
-                  }}
-                  sx={{ borderRadius: 4 }}
-                >
-                  Submit Project
-                </Button>
-              ) : (
-                <Chip 
-                  label="Project Already Submitted" 
-                  color="success" 
-                  size="medium"
-                  sx={{ 
-                    borderRadius: 4, 
-                    py: 2.5,
-                    width: '100%',
-                    justifyContent: 'center'
-                  }}
-                />
-              )}
+              {isLeader ? (
+                selectedProject.status === "PARTIAL" ? (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    startIcon={<SendIcon />}
+                    onClick={() => {
+                      handleSubmitProject(selectedProject.id);
+                      handleCloseDetails();
+                    }}
+                    sx={{ borderRadius: 4 }}
+                  >
+                    Submit Project
+                  </Button>
+                ) : (
+                  <Chip 
+                    label="Project Already Submitted" 
+                    color="success" 
+                    size="medium"
+                    sx={{ 
+                      borderRadius: 4, 
+                      py: 2.5,
+                      width: '100%',
+                      justifyContent: 'center'
+                    }}
+                  />
+                )
+              ) : null}
             </DialogActions>
           </>
-        )}
+          );
+        })()}
       </Dialog>
     </>
   );
@@ -646,6 +690,7 @@ export default function Home() {
                     >
                       <ProjectsTable 
                         projects={projects}
+                        currentUserId={session?.user?.id}
                         loadingProjectId={loadingProjectId}
                         handleDownloadSummary={handleDownloadSummary}
                         handleSubmitProject={handleSubmitProject}

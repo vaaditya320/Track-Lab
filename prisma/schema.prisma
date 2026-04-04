@@ -19,6 +19,7 @@ model User {
   batch           Batch?    // New enum field for batch
   projects        Project[] @relation("ProjectLeader") // The relation to projects as leader
   assignedProjects Project[] @relation("ProjectAdmin") // The relation to projects as admin
+  projectMemberships ProjectMember[]
   achievements    Achievement[]
 }
 
@@ -34,6 +35,18 @@ model Project {
   status         Status   @default(PARTIAL) // Default status is PARTIAL
   leader         User     @relation("ProjectLeader", fields: [leaderId], references: [id], onDelete: Cascade) // Relation to User
   assignedTeacher  User?    @relation("ProjectAdmin", fields: [assignedTeacherId], references: [id]) // Relation to User for teacher
+  members        ProjectMember[]
+}
+
+model ProjectMember {
+  id        String  @id @default(uuid())
+  projectId String
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model Student {

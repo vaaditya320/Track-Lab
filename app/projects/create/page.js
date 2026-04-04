@@ -28,11 +28,6 @@ import {
   IconButton,
   Tooltip,
   useTheme,
-  List,
-  ListItem,
-  ListItemText,
-  ClickAwayListener,
-  Popper,
   Autocomplete,
   Chip,
 } from "@mui/material";
@@ -107,291 +102,92 @@ const CreateProjectSkeleton = () => {
   );
 };
 
-// TypeaheadInput component for team member selection
-const TypeaheadInput = ({ value, onChange, label, placeholder, required }) => {
-  const [suggestions, setSuggestions] = useState([]);
+/** Pick a registered student (User) — options load from `/api/users/search`. */
+function TeamMemberAutocomplete({ value, onChange, label, excludeIds = [], required }) {
+  const [inputValue, setInputValue] = useState(() =>
+    value ? `${value.name} (${value.regId})` : ""
+  );
+  const [options, setOptions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const inputRef = useRef(null);
-  const [allStudents, setAllStudents] = useState([]);
-  const theme = useTheme();
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const isClickingSuggestion = useRef(false);
-  
-  // Fetch all students when component mounts
+  const debounceRef = useRef(null);
+
   useEffect(() => {
-    const fetchStudents = async () => {
+    if (value) setInputValue(`${value.name} (${value.regId})`);
+    else setInputValue("");
+  }, [value]);
+
+  useEffect(() => {
+    const q = inputValue.trim();
+    if (q.length < 2) {
+      setOptions([]);
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const response = await axios.get("/api/students");
-        setAllStudents(response.data);
-      } catch (error) {
-        console.error("Error fetching students:", error);
+        const res = await axios.get("/api/users/search", {
+          params: { q, limit: 20 },
+        });
+        const data = Array.isArray(res.data) ? res.data : [];
+        const exclude = new Set(excludeIds);
+        setOptions(data.filter((u) => u?.id && !exclude.has(u.id)));
+      } catch {
+        setOptions([]);
       } finally {
         setLoading(false);
       }
-    };
-    
-    fetchStudents();
-  }, []);
-  
-  // Update suggestions when value changes
-  useEffect(() => {
-    if (value.trim() === '') {
-      setSuggestions([]);
-      return;
-    }
-    
-    const query = value.toLowerCase();
-    const filtered = allStudents.filter(student => 
-      student.name.toLowerCase().includes(query) ||
-      student.regId.toLowerCase().includes(query)
-    ).slice(0, 10); // Limit to 10 suggestions
-    
-    setSuggestions(filtered);
-    setOpen(filtered.length > 0);
-    setSelectedIndex(-1); // Reset selection when suggestions change
-  }, [value, allStudents]);
-  
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!open) return;
-      
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setSelectedIndex(prevIndex => 
-            prevIndex < suggestions.length - 1 ? prevIndex + 1 : prevIndex
-          );
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setSelectedIndex(prevIndex => 
-            prevIndex > 0 ? prevIndex - 1 : 0
-          );
-          break;
-        case 'Enter':
-          e.preventDefault();
-          if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-            handleSuggestionClick(suggestions[selectedIndex]);
-          }
-          break;
-        case 'Escape':
-          setOpen(false);
-          break;
-        default:
-          break;
-      }
-    };
+    }, 300);
 
-    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [open, selectedIndex, suggestions]);
-  
-  const handleInputChange = (e) => {
-    onChange(e.target.value);
-    setOpen(true);
-  };
-  
-  const handleSuggestionClick = (suggestion) => {
-    const displayValue = `${suggestion.name} ${suggestion.regId}`;
-    onChange(displayValue);
-    setOpen(false);
-    inputRef.current?.blur();
-  };
-  
-  const handleClickAway = () => {
-    setOpen(false);
-  };
+  }, [inputValue, excludeIds.join(",")]);
 
-  const handleBlur = () => {
-    if (isClickingSuggestion.current) {
-      isClickingSuggestion.current = false;
-      return;
-    }
-    setTimeout(() => {
-      const trimmedValue = value.trim();
-      onChange(trimmedValue);
-      setOpen(false);
-    }, 150);
-  };
-
-  const highlightMatch = (text, query) => {
-    if (!query.trim()) return text;
-    
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    const parts = text.split(regex);
-    
-    return parts.map((part, i) => 
-      regex.test(part) ? 
-        <Box component="span" key={i} sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>{part}</Box> : 
-        part
-    );
-  };
-  
-  const getAvatarColor = (name) => {
-    const colors = [
-      '#1E88E5', '#43A047', '#E53935', '#8E24AA', '#FB8C00', 
-      '#00ACC1', '#3949AB', '#D81B60', '#6D4C41', '#546E7A'
-    ];
-    const charCode = name.charCodeAt(0) || 0;
-    return colors[charCode % colors.length];
-  };
-  
-  const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-  
   return (
-    <ClickAwayListener onClickAway={handleClickAway}>
-      <Box sx={{ position: 'relative', width: '100%' }}>
+    <Autocomplete
+      value={value}
+      onChange={(_e, newValue) => onChange(newValue)}
+      inputValue={inputValue}
+      onInputChange={(_e, newInput, reason) => {
+        if (reason === "input") setInputValue(newInput);
+        if (reason === "clear") setInputValue("");
+        if (reason === "reset" && value) {
+          setInputValue(`${value.name} (${value.regId})`);
+        }
+      }}
+      options={options}
+      loading={loading}
+      getOptionLabel={(opt) => (opt ? `${opt.name} (${opt.regId})` : "")}
+      isOptionEqualToValue={(a, b) => a?.id === b?.id}
+      filterOptions={(x) => x}
+      noOptionsText={
+        inputValue.trim().length < 2
+          ? "Start typing to search"
+          : "No registered students found"
+      }
+      renderInput={(params) => (
         <TextField
-          ref={inputRef}
+          {...params}
           label={label}
-          variant="outlined"
-          fullWidth
-          value={value}
-          onChange={handleInputChange}
-          onBlur={handleBlur}
           required={required}
-          placeholder={placeholder}
+          placeholder="Search by name or registration ID"
           size="small"
           InputProps={{
-            startAdornment: loading ? (
-              <CircularProgress size={20} sx={{ mr: 1 }} />
-            ) : (
-              <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+            ...params.InputProps,
+            startAdornment: (
+              <>
+                <SearchIcon sx={{ ml: 0.5, mr: 0.5, color: "text.secondary" }} />
+                {params.InputProps.startAdornment}
+              </>
             ),
           }}
-          onFocus={() => value.trim() !== '' && suggestions.length > 0 && setOpen(true)}
         />
-        
-        {open && suggestions.length > 0 && (
-          <Paper
-            sx={{
-              position: 'absolute',
-              width: '100%',
-              mt: 0.5,
-              zIndex: 1000,
-              maxHeight: 250,
-              overflow: 'auto',
-              borderRadius: 1.5,
-              boxShadow: '0 8px 16px rgba(0,0,0,0.12)',
-              transition: 'all 0.2s ease-in-out',
-              animation: 'fadeIn 0.2s ease-in-out',
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-y',
-              '@keyframes fadeIn': {
-                '0%': {
-                  opacity: 0,
-                  transform: 'translateY(-10px)'
-                },
-                '100%': {
-                  opacity: 1,
-                  transform: 'translateY(0)'
-                }
-              }
-            }}
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-          >
-            <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-              <Typography variant="caption" color="text.secondary">
-                {suggestions.length} results found
-              </Typography>
-            </Box>
-            
-            <List disablePadding>
-              {suggestions.map((suggestion, index) => (
-                <ListItem
-                  key={index}
-                  onMouseDown={() => { isClickingSuggestion.current = true; }}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  sx={{
-                    transition: 'all 0.2s',
-                    p: 1.5,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: theme.palette.action.hover,
-                      transform: 'translateX(4px)',
-                    },
-                    backgroundColor: selectedIndex === index ? 
-                      theme.palette.action.selected : 'transparent',
-                    '&:not(:last-child)': {
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                      borderBottomColor: 'rgba(0, 0, 0, 0.04)'
-                    },
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2
-                  }}
-                  component={motion.li}
-                  initial={{ opacity: 0, x: -5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.03 }}
-                >
-                  <Box
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      backgroundColor: getAvatarColor(suggestion.name),
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '0.875rem',
-                      flexShrink: 0
-                    }}
-                  >
-                    {getInitials(suggestion.name)}
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {highlightMatch(`${suggestion.name} ${suggestion.regId}`, value)}
-                    </Typography>
-                    {suggestion.role && (
-                      <Typography variant="caption" color="text.secondary">
-                        {suggestion.role}
-                      </Typography>
-                    )}
-                  </Box>
-                </ListItem>
-              ))}
-            </List>
-            
-            {suggestions.length > 0 && (
-              <Box 
-                sx={{ 
-                  p: 1, 
-                  borderTop: `1px solid ${theme.palette.divider}`,
-                  bgcolor: 'rgba(0, 0, 0, 0.02)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontSize: '0.75rem',
-                  color: 'text.secondary'
-                }}
-              >
-                <Typography variant="caption">Press Enter to select</Typography>
-                <Typography variant="caption">↑↓ to navigate</Typography>
-              </Box>
-            )}
-          </Paper>
-        )}
-      </Box>
-    </ClickAwayListener>
+      )}
+    />
   );
-};
+}
 
 export default function CreateProject() {
   const { data: session, status } = useSession();
@@ -400,7 +196,8 @@ export default function CreateProject() {
 
   const [title, setTitle] = useState("");
   const [numMembers, setNumMembers] = useState(1);
-  const [teamMembers, setTeamMembers] = useState([]);
+  /** @type {Array<{ id: string; name: string; regId: string } | null>} */
+  const [teamMemberSelections, setTeamMemberSelections] = useState([null]);
   const [components, setComponents] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -411,7 +208,13 @@ export default function CreateProject() {
   const [inputString, setInputString] = useState('');
 
   useEffect(() => {
-    setTeamMembers(Array(numMembers).fill(""));
+    setTeamMemberSelections((prev) => {
+      const next = Array(numMembers).fill(null);
+      for (let i = 0; i < Math.min(prev.length, numMembers); i++) {
+        next[i] = prev[i];
+      }
+      return next;
+    });
   }, [numMembers]);
 
   useEffect(() => {
@@ -426,21 +229,20 @@ export default function CreateProject() {
     fetchTeachers();
   }, []);
 
-  const handleTeamMemberChange = (index, value) => {
-    const updatedMembers = [...teamMembers];
-    updatedMembers[index] = value;
-    setTeamMembers(updatedMembers);
+  const handleTeamMemberChange = (index, user) => {
+    setTeamMemberSelections((prev) => {
+      const next = [...prev];
+      next[index] = user;
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Trim whitespace from all inputs
     const trimmedTitle = title.trim();
     const trimmedComponents = components.join(", ");
-    const trimmedTeamMembers = teamMembers.map(member => member.trim());
 
-    // Check if any required field is empty
     if (!trimmedTitle) {
       setToast({ open: true, message: "Project title is required.", severity: "error" });
       return;
@@ -451,10 +253,24 @@ export default function CreateProject() {
       return;
     }
 
-    // Check if any team member name is empty
-    const emptyMemberIndex = trimmedTeamMembers.findIndex(member => !member);
+    const emptyMemberIndex = teamMemberSelections.findIndex((m) => !m);
     if (emptyMemberIndex !== -1) {
-      setToast({ open: true, message: `Team member ${emptyMemberIndex + 1} name is required.`, severity: "error" });
+      setToast({
+        open: true,
+        message: `Select a registered student for team member ${emptyMemberIndex + 1}.`,
+        severity: "error",
+      });
+      return;
+    }
+
+    const teamMemberIds = teamMemberSelections.map((m) => m.id);
+    const unique = new Set(teamMemberIds);
+    if (unique.size !== teamMemberIds.length) {
+      setToast({
+        open: true,
+        message: "Each team member must be a different person.",
+        severity: "error",
+      });
       return;
     }
 
@@ -469,11 +285,9 @@ export default function CreateProject() {
     try {
       const projectData = {
         title: trimmedTitle,
-        teamMembers: trimmedTeamMembers.join(", "),
+        teamMemberIds,
         components: trimmedComponents,
         assignedTeacherId: selectedTeacherId,
-        leaderId: session?.user?.id,
-        status: "PARTIAL" // Using the default status from schema
       };
 
       const response = await axios.post("/api/projects/create", projectData);
@@ -797,17 +611,22 @@ export default function CreateProject() {
                       }}
                     >
                       <Grid container spacing={2}>
-                        {teamMembers.map((member, index) => (
-                          <Grid item xs={12} sm={numMembers > 2 ? 6 : 12} key={index}>
-                            <TypeaheadInput
-                              label={`Team Member ${index + 1}`}
-                              value={member}
-                              onChange={(value) => handleTeamMemberChange(index, value)}
-                              required
-                              placeholder="Start typing a name"
-                            />
-                          </Grid>
-                        ))}
+                        {teamMemberSelections.map((member, index) => {
+                          const excludeIds = teamMemberSelections
+                            .map((m, i) => (i !== index && m ? m.id : null))
+                            .filter(Boolean);
+                          return (
+                            <Grid item xs={12} sm={numMembers > 2 ? 6 : 12} key={index}>
+                              <TeamMemberAutocomplete
+                                label={`Team Member ${index + 1}`}
+                                value={member}
+                                onChange={(user) => handleTeamMemberChange(index, user)}
+                                excludeIds={excludeIds}
+                                required
+                              />
+                            </Grid>
+                          );
+                        })}
                       </Grid>
                     </Box>
                   </Grid>

@@ -50,13 +50,24 @@ export default function SubmitPage() {
   useEffect(() => {
     if (status === "authenticated" && projectId) {
       fetch(`/api/projects/${projectId}`)
-        .then((response) => response.json())
-        .then((data) => {
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) {
+            setError(
+              response.status === 403
+                ? "You do not have access to this project."
+                : data.error || "Error loading project details."
+            );
+            setProject(null);
+            setLoading(false);
+            return;
+          }
+          setError("");
           setProject(data);
           setLoading(false);
         })
-        .catch((error) => {
-          console.error("Error fetching project:", error);
+        .catch((err) => {
+          console.error("Error fetching project:", err);
           setError("Error loading project details.");
           setLoading(false);
         });
@@ -134,17 +145,22 @@ export default function SubmitPage() {
 
   const getTeamMembers = () => {
     if (!project) return [];
-    
+
     if (Array.isArray(project.teamMembers)) {
       return project.teamMembers;
     }
-    
+
     try {
       return JSON.parse(project.teamMembers || "[]");
     } catch (e) {
       return [];
     }
   };
+
+  const isLeader =
+    project &&
+    (project.viewerRole === "leader" ||
+      (session?.user?.id && project.leaderId === session.user.id));
 
   // Loading skeleton component
   const SubmitProjectSkeleton = () => {
@@ -270,7 +286,9 @@ export default function SubmitPage() {
           transition={{ duration: 0.5 }}
         >
           <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-            <Alert severity="error" sx={{ mb: 2 }}>Project not found.</Alert>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error || "Project not found."}
+            </Alert>
             <Button 
               variant="contained" 
               startIcon={<ArrowBackIcon />}
@@ -329,7 +347,7 @@ export default function SubmitPage() {
             }}
           >
             <Typography variant="h4" fontWeight="bold" gutterBottom>
-              Complete Your Project
+              {isLeader ? "Complete Your Project" : "Project overview"}
             </Typography>
             <Typography variant="h6">
               {project.title}
@@ -337,7 +355,12 @@ export default function SubmitPage() {
           </Box>
 
           <CardContent sx={{ p: 4 }}>
-            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+            {error && isLeader && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+            {!isLeader && (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                You are a team member. Only the project leader can submit or update this project.
+              </Alert>
+            )}
 
             <Grid container spacing={4}>
               <Grid item xs={12} md={6}>
@@ -351,18 +374,33 @@ export default function SubmitPage() {
                     Team Members
                   </Typography>
                   <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap', gap: 1 }}>
-                    {getTeamMembers().map((member, index) => (
+                    {getTeamMembers().map((member, index) => {
+                      const label = typeof member === "string" ? member : String(member ?? "");
+                      return (
                       <Chip 
                         key={index}
-                        avatar={<Avatar>{member.charAt(0).toUpperCase()}</Avatar>}
-                        label={member}
+                        avatar={<Avatar>{label ? label.charAt(0).toUpperCase() : "?"}</Avatar>}
+                        label={label || "—"}
                         variant="outlined"
                         sx={{ mb: 1 }}
                       />
-                    ))}
+                    );
+                    })}
                   </Stack>
                 </Box>
 
+                {!isLeader && project.status === "SUBMITTED" && project.summary && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="h6" fontWeight="bold" gutterBottom>
+                      Summary
+                    </Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+                      {project.summary}
+                    </Typography>
+                  </Box>
+                )}
+
+                {isLeader && (
                 <form onSubmit={handleSubmit}>
                   <TextField
                     label="Project Summary"
@@ -401,6 +439,7 @@ export default function SubmitPage() {
                     {submitting ? "Submitting..." : "Complete Project"}
                   </Button>
                 </form>
+                )}
               </Grid>
               
               <Grid item xs={12} md={6}>
@@ -417,7 +456,10 @@ export default function SubmitPage() {
                       borderRadius: 2,
                       p: 3,
                       textAlign: 'center',
-                      backgroundColor: theme => previewUrl ? 'transparent' : (theme.palette.mode === 'dark' ? 'rgba(30,30,30,0.5)' : '#f8f9fa'),
+                      backgroundColor: theme =>
+                        previewUrl || (!isLeader && project.projectPhoto)
+                          ? 'transparent'
+                          : (theme.palette.mode === 'dark' ? 'rgba(30,30,30,0.5)' : '#f8f9fa'),
                       position: 'relative',
                       height: 320,
                       display: 'flex',
@@ -427,7 +469,20 @@ export default function SubmitPage() {
                       overflow: 'hidden'
                     }}
                   >
-                    {previewUrl ? (
+                    {!isLeader && project.status === "SUBMITTED" && project.projectPhoto ? (
+                      <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <img
+                          src={`/api/projects/${projectId}/image?key=${encodeURIComponent(project.projectPhoto)}`}
+                          alt="Project"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '8px'
+                          }}
+                        />
+                      </Box>
+                    ) : previewUrl ? (
                       <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
                         <img
                           src={previewUrl}
@@ -459,14 +514,21 @@ export default function SubmitPage() {
                       <>
                         <CloudUploadIcon sx={{ fontSize: 60, color: theme => theme.palette.mode === 'dark' ? '#777' : '#9e9e9e', mb: 2 }} />
                         <Typography variant="body1" gutterBottom>
-                          Drag and drop your project photo here
+                          {isLeader
+                            ? "Drag and drop your project photo here"
+                            : project.status === "PARTIAL"
+                              ? "Photo will appear here after the leader submits the project."
+                              : "No photo uploaded."}
                         </Typography>
+                        {isLeader && (
                         <Typography variant="body2" color="text.secondary" gutterBottom>
                           or click to browse files
                         </Typography>
+                        )}
                       </>
                     )}
                     
+                    {isLeader && (
                     <input
                       type="file"
                       accept="image/*"
@@ -482,11 +544,14 @@ export default function SubmitPage() {
                       }}
                       id="photo-upload"
                     />
+                    )}
                   </Paper>
                   
+                  {isLeader && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
                     Showcase your completed project with a high-quality photo
                   </Typography>
+                  )}
                 </Box>
               </Grid>
             </Grid>

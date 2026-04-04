@@ -1,6 +1,10 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
+import {
+  canViewStudentProject,
+  getProjectAccess,
+} from "@/lib/projectAccess";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { Buffer } from "buffer";
@@ -701,24 +705,34 @@ async function sendEmailWithPDF(userEmail, pdfBuffer, s3Key, project) {
   }
 }
 
-// Fetch project details including status
-async function fetchProjectDetails(projectId) {
-  const response = await fetch(`${process.env.BASE_URL}/api/projects/${projectId}`);
-  if (!response.ok) throw new Error("Failed to fetch project details");
-  return response.json();
-}
-
 // API Route
 export async function GET(req, { params }) {
   try {
-    const { id } = params;
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
     if (!id) return new Response(JSON.stringify({ error: "Invalid project ID" }), { status: 400 });
 
     const session = await getServerSession(authOptions);
-    if (!session) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    if (!session?.user?.id) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
 
-    const project = await fetchProjectDetails(id);
-    if (!project) return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        leader: true,
+        members: { select: { userId: true } },
+      },
+    });
+
+    if (!project) {
+      return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
+    }
+
+    const access = getProjectAccess(project, session.user.id);
+    if (!canViewStudentProject(access)) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+    }
 
     // project.leaderName is not available directly on project, use project.leader.name
     const leaderName = project.leader?.name; // Use optional chaining

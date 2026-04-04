@@ -2,6 +2,8 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { logAdminAction, LogType } from "@/lib/logger";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 // AWS S3 Configuration
 const s3 = new S3Client({
@@ -17,6 +19,11 @@ const FOLDER_NAME = "tracklab-project-pics/";
 
 export async function POST(req, { params }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const resolvedParams = await params;
     const projectId = resolvedParams.id;
     if (!projectId) {
@@ -58,6 +65,10 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    if (existingProject.leaderId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     // Update project in DB
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
@@ -82,7 +93,5 @@ export async function POST(req, { params }) {
   } catch (error) {
     console.error("Error updating project:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }

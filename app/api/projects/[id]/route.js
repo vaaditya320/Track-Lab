@@ -3,9 +3,19 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { logAdminAction, LogType } from "@/lib/logger";
+import {
+  canViewStudentProject,
+  getProjectAccess,
+  viewerRoleFromAccess,
+} from "@/lib/projectAccess";
 
 export async function GET(req, { params }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const resolvedParams = await params;
     const { id } = resolvedParams;
 
@@ -15,14 +25,24 @@ export async function GET(req, { params }) {
 
     const project = await prisma.project.findUnique({
       where: { id },
-      include: { leader: true },
+      include: {
+        leader: true,
+        members: { select: { userId: true } },
+      },
     });
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    return NextResponse.json(project, { status: 200 });
+    const access = getProjectAccess(project, session.user.id);
+    if (!canViewStudentProject(access)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const viewerRole = viewerRoleFromAccess(access);
+
+    return NextResponse.json({ ...project, viewerRole }, { status: 200 });
   } catch (error) {
     console.error('Error fetching project:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
