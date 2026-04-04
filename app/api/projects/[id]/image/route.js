@@ -13,7 +13,7 @@ const BUCKET_NAME = "cache-buster";
 
 export async function GET(req, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     if (!id) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
     }
