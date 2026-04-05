@@ -2,7 +2,8 @@
 
 TrackLab is a project tracking platform designed for **Idea Lab**. It allows users to create, manage, and submit projects with **OAuth2 authentication**, project completion tracking, **PDF generation**, and email notifications.
 
-## 🚀 Features
+## Features
+
 - **Google OAuth2 Authentication**
 - **Project Creation & Management**
 - **Admin Panel for Project Oversight**
@@ -13,17 +14,18 @@ TrackLab is a project tracking platform designed for **Idea Lab**. It allows use
 - **PostgreSQL with Prisma ORM**
 - **Next.js (App Router) for a Modern Development Experience**
 
----
+## Installation and setup
 
-## 📦 Installation & Setup
+### 1. Clone the repository
 
-### 1️⃣ Clone the Repository
 ```sh
 git clone https://github.com/vaaditya320/TrackLab.git
 cd TrackLab
 ```
-### 2️⃣ Create an .env File
-Inside the project root, create a .env file and add your credentials:
+
+### 2. Create an environment file
+
+Inside the project root, create a `.env` file and add your credentials:
 
 ```bash
 # Environment Variables (.env.example)
@@ -58,26 +60,35 @@ BREVO_API_KEY=<your_brevo_api_key>
 ## Feature Flags
 IS_DOWN=false
 ```
-### 3️⃣ Install Dependencies
+
+### 3. Install dependencies
+
 ```bash
 npm install
 ```
 
-### 4️⃣ Start the Development Server
+### 4. Start the development server
+
 ```bash
 npm run dev
 ```
-The app will be available at:
-➡️ http://localhost:3000
 
-## 🛠️ Tech Stack
-* Next.js (App Router)
-* PostgreSQL with Prisma ORM
-* Google OAuth2 Authentication
-* Nodemailer for Email Notifications
-* pdf-lib for PDF Generation
-* AWS S3 (Planned for Storage)
-* Material UI & Framer Motion for UI Enhancements
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-## 🤝 Contributing
-Contributions are welcome! Feel free to open an **issue** or submit a **pull request**.
+## Tech stack
+
+- Next.js (App Router)
+- PostgreSQL with Prisma ORM
+- Google OAuth2 Authentication
+- Nodemailer for Email Notifications
+- pdf-lib for PDF Generation
+- AWS S3 (Planned for Storage)
+- Material UI & Framer Motion for UI Enhancements
+
+## Contributing
+
+Contributions are welcome. Open an **issue** or submit a **pull request**. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines.
+
+## License
+
+This project is licensed under the GNU GPL v3. See [LICENSE](LICENSE) for the full text.
