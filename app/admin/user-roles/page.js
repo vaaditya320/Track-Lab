@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@mui/material/styles";
@@ -16,6 +16,20 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { motion } from "framer-motion";
+
+const PAGE_SIZE = 20;
+
+function buildUserListParams({ skip, debouncedSearch, debouncedEmail, filter }) {
+  const params = new URLSearchParams();
+  params.set("take", String(PAGE_SIZE));
+  params.set("skip", String(skip));
+  const q = debouncedSearch.trim();
+  if (q.length >= 2) params.set("search", q);
+  const em = debouncedEmail.trim();
+  if (em.length >= 2) params.set("email", em);
+  if (filter.role) params.set("role", filter.role);
+  return params;
+}
 
 // LoadingSkeleton component
 const LoadingSkeleton = () => {
@@ -438,11 +452,15 @@ export default function AdminUsersPage() {
   const router = useRouter();
 
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const firstAuthFetchDone = useRef(false);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedEmail, setDebouncedEmail] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
-  const [filter, setFilter] = useState({ name: "", role: "", email: "" });
+  const [filter, setFilter] = useState({ search: "", role: "", email: "" });
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [error, setError] = useState("");
   const [forbidden, setForbidden] = useState(false);
@@ -453,61 +471,90 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
-    // Only proceed when authentication status is determined
-    if (status === "loading") return;
-    
-    if (status === "authenticated") {
-      checkAdminAndFetchUsers();
-    } else {
-      // User is not authenticated
-      setInitialLoading(false);
-      setAdminChecked(true);
-    }
-  }, [status]);
-
-  const checkAdminAndFetchUsers = async () => {
-    setInitialLoading(true);
-    try {
-      const response = await axios.get("/api/admin/users", {
-        headers: { Authorization: `Bearer ${session?.user?.id}` },
-      });
-      setUsers(response.data);
-      setFilteredUsers(response.data);
-      setAdminChecked(true);
-    } catch (error) {
-      if (error.response && error.response.status === 403) {
-        setForbidden(true);
-        setAdminChecked(true);
-      } else {
-        setError("Failed to fetch users");
-        console.error(error);
-        setAdminChecked(true);
-      }
-    } finally {
-      setInitialLoading(false);
-    }
-  };
+    const t = setTimeout(() => setDebouncedSearch(filter.search), 350);
+    return () => clearTimeout(t);
+  }, [filter.search]);
 
   useEffect(() => {
-    const filtered = users.filter(user =>
-      (filter.name ? user.name.toLowerCase().includes(filter.name.toLowerCase()) : true) &&
-      (filter.role ? user.role.toLowerCase() === filter.role.toLowerCase() : true) &&
-      (filter.email ? user.email.toLowerCase().includes(filter.email.toLowerCase()) : true)
-    );
-    setFilteredUsers(filtered);
-  }, [filter, users]);
+    const t = setTimeout(() => setDebouncedEmail(filter.email), 350);
+    return () => clearTimeout(t);
+  }, [filter.email]);
+
+  const fetchFirstPage = useCallback(async () => {
+    if (!session?.user?.id) return;
+    const params = buildUserListParams({
+      skip: 0,
+      debouncedSearch,
+      debouncedEmail,
+      filter,
+    });
+    const response = await axios.get(`/api/admin/users?${params}`, {
+      headers: { Authorization: `Bearer ${session.user.id}` },
+    });
+    setUsers(response.data.items);
+    setHasMore(response.data.hasMore);
+  }, [session?.user?.id, debouncedSearch, debouncedEmail, filter.role]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (status !== "authenticated" || !session?.user?.id) {
+      firstAuthFetchDone.current = false;
+      setUsers([]);
+      setHasMore(false);
+      setInitialLoading(false);
+      setAdminChecked(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      if (firstAuthFetchDone.current) setLoading(true);
+      else setInitialLoading(true);
+      setError("");
+      try {
+        await fetchFirstPage();
+        if (cancelled) return;
+        setForbidden(false);
+        setAdminChecked(true);
+        firstAuthFetchDone.current = true;
+      } catch (error) {
+        if (cancelled) return;
+        const unauthorized =
+          error.response &&
+          (error.response.status === 401 || error.response.status === 403);
+        if (unauthorized) {
+          setForbidden(true);
+          setAdminChecked(true);
+        } else {
+          setError("Failed to fetch users");
+          console.error(error);
+          setAdminChecked(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setInitialLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status, session?.user?.id, fetchFirstPage]);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/api/admin/users", {
-        headers: { Authorization: `Bearer ${session?.user?.id}` },
-      });
-      setUsers(response.data);
-      setFilteredUsers(response.data);
+      await fetchFirstPage();
       setToast({ open: true, message: "Users refreshed successfully", severity: "success" });
     } catch (error) {
-      if (error.response && error.response.status === 403) {
+      const unauthorized =
+        error.response &&
+        (error.response.status === 401 || error.response.status === 403);
+      if (unauthorized) {
         setForbidden(true);
       } else {
         setError("Failed to fetch users");
@@ -518,6 +565,44 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   };
+
+  const loadMore = useCallback(async () => {
+    if (!session?.user?.id || !hasMore || loadingMore || loading) return;
+    setLoadingMore(true);
+    try {
+      const params = buildUserListParams({
+        skip: users.length,
+        debouncedSearch,
+        debouncedEmail,
+        filter,
+      });
+      const response = await axios.get(`/api/admin/users?${params}`, {
+        headers: { Authorization: `Bearer ${session.user.id}` },
+      });
+      setUsers((prev) => [...prev, ...response.data.items]);
+      setHasMore(response.data.hasMore);
+    } catch (error) {
+      const unauthorized =
+        error.response &&
+        (error.response.status === 401 || error.response.status === 403);
+      if (unauthorized) {
+        setForbidden(true);
+      } else {
+        setToast({ open: true, message: "Failed to load more users", severity: "error" });
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    session?.user?.id,
+    hasMore,
+    loadingMore,
+    loading,
+    users.length,
+    debouncedSearch,
+    debouncedEmail,
+    filter,
+  ]);
 
   // Handle Promote/Demote
   async function handleRoleChange(id, action) {
@@ -680,11 +765,16 @@ export default function AdminUsersPage() {
             <Grid item xs={12} sm={6} md={4}>
               <TextField
                 fullWidth
-                label="Search by Name"
+                label="Search by name or Reg ID"
                 variant="outlined"
-                value={filter.name}
-                name="name"
+                value={filter.search}
+                name="search"
                 onChange={handleFilterChange}
+                helperText={
+                  filter.search.trim().length === 1
+                    ? "Type at least 2 characters to search"
+                    : undefined
+                }
               />
             </Grid>
             <Grid item xs={12} sm={6} md={4}>
@@ -706,6 +796,11 @@ export default function AdminUsersPage() {
                 value={filter.email}
                 name="email"
                 onChange={handleFilterChange}
+                helperText={
+                  filter.email.trim().length === 1
+                    ? "Type at least 2 characters to search"
+                    : undefined
+                }
               />
             </Grid>
           </Grid>
@@ -748,7 +843,7 @@ export default function AdminUsersPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredUsers.length === 0 ? (
+                  {users.length === 0 && !loading && !initialLoading ? (
                     <TableRow>
                       <TableCell colSpan={isMobile ? 3 : 5} align="center" sx={{ py: 3 }}>
                         <Typography variant="body1" color="textSecondary">
@@ -757,7 +852,7 @@ export default function AdminUsersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredUsers.map((user, index) => (
+                    users.map((user, index) => (
                       <TableRow 
                         key={user.id} 
                         onClick={() => handleRowClick(user)}
@@ -884,6 +979,19 @@ export default function AdminUsersPage() {
                 </TableBody>
               </Table>
             </TableContainer>
+
+            {hasMore && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={loadMore}
+                  disabled={loadingMore || loading}
+                  startIcon={loadingMore ? <CircularProgress size={18} /> : null}
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
+                </Button>
+              </Box>
+            )}
           </CardContent>
         </Card>
 

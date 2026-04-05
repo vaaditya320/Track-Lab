@@ -5,17 +5,59 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { logAdminAction, LogType } from "@/lib/logger";
 import { isSuperAdmin } from "@/lib/isSuperAdmin";
 
-// GET all users (admin only)
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+function buildWhere(url) {
+  const search = (url.searchParams.get("search") || "").trim();
+  const email = (url.searchParams.get("email") || "").trim();
+  const role = (url.searchParams.get("role") || "").trim();
+
+  const and = [];
+  if (role === "ADMIN") {
+    and.push({ role: { in: ["ADMIN", "SUPER_ADMIN"] } });
+  } else if (role === "STUDENT" || role === "TEACHER" || role === "SUPER_ADMIN") {
+    and.push({ role });
+  }
+  if (email.length >= 2) {
+    and.push({
+      email: { contains: email, mode: "insensitive" },
+    });
+  }
+  if (search.length >= 2) {
+    and.push({
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { regId: { contains: search, mode: "insensitive" } },
+      ],
+    });
+  }
+  return and.length ? { AND: and } : {};
+}
+
+// GET users — paginated list (super admin only)
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Check if user is super admin
+
     if (!session || !isSuperAdmin(session)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const users = await prisma.user.findMany({
+    const url = new URL(request.url);
+    let take = parseInt(url.searchParams.get("take") || String(DEFAULT_PAGE_SIZE), 10);
+    if (Number.isNaN(take) || take < 1) take = DEFAULT_PAGE_SIZE;
+    take = Math.min(take, MAX_PAGE_SIZE);
+    let skip = parseInt(url.searchParams.get("skip") || "0", 10);
+    if (Number.isNaN(skip) || skip < 0) skip = 0;
+
+    const where = buildWhere(url);
+
+    const rows = await prisma.user.findMany({
+      where,
+      skip,
+      take: take + 1,
+      orderBy: { id: "desc" },
       select: {
         id: true,
         name: true,
@@ -24,17 +66,22 @@ export async function GET(request) {
         role: true,
         branch: true,
         section: true,
-        batch: true
-      }
+        batch: true,
+      },
     });
 
-    await logAdminAction(
-      `All users fetched by admin ${session.user.name}`,
-      LogType.USER_MANAGEMENT,
-      { adminEmail: session.user.email }
-    );
+    const hasMore = rows.length > take;
+    const items = hasMore ? rows.slice(0, take) : rows;
 
-    return NextResponse.json(users);
+    if (skip === 0) {
+      await logAdminAction(
+        `User list fetched by admin ${session.user.name} (${items.length} row(s))`,
+        LogType.USER_MANAGEMENT,
+        { adminEmail: session.user.email }
+      );
+    }
+
+    return NextResponse.json({ items, hasMore });
   } catch (error) {
     console.error("Error fetching users:", error);
     return NextResponse.json(
