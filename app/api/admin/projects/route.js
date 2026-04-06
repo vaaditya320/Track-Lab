@@ -7,9 +7,27 @@ import { isAdmin } from "@/lib/isAdmin";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
+function sessionToCreatedAtRange(session) {
+  // Dates are inclusive start, exclusive end (UTC) to avoid TZ edge cases.
+  // Sem 1: Aug 2025 → Jan 2026
+  // Sem 2: Jan 2026 → Apr 2026
+  if (session === "2025-2026-sem1") {
+    return {
+      gte: new Date(Date.UTC(2025, 7, 1, 0, 0, 0)),  // 2025-08-01
+      lt: new Date(Date.UTC(2026, 1, 1, 0, 0, 0)),   // 2026-02-01
+    };
+  }
+  if (session === "2025-2026-sem2") {
+    return {
+      gte: new Date(Date.UTC(2026, 0, 1, 0, 0, 0)),  // 2026-01-01
+      lt: new Date(Date.UTC(2026, 4, 1, 0, 0, 0)),   // 2026-05-01
+    };
+  }
+  return null;
+}
+
 function buildWhere(url) {
   const search = (url.searchParams.get("search") || "").trim();
-  const leader = (url.searchParams.get("leader") || "").trim();
   const status = (url.searchParams.get("status") || "").trim();
   const batch = (url.searchParams.get("batch") || "").trim();
 
@@ -18,28 +36,42 @@ function buildWhere(url) {
     and.push({ status });
   }
 
-  const leaderParts = [];
-  if (batch) leaderParts.push({ batch });
-  if (leader.length > 0) {
-    leaderParts.push({
-      name: { contains: leader, mode: "insensitive" },
-    });
-  }
-  if (leaderParts.length === 1) {
-    and.push({ leader: leaderParts[0] });
-  } else if (leaderParts.length > 1) {
-    and.push({ leader: { AND: leaderParts } });
-  }
+  if (batch) and.push({ leader: { batch } });
 
   if (search.length > 0) {
     and.push({
       OR: [
         { title: { contains: search, mode: "insensitive" } },
         { leader: { name: { contains: search, mode: "insensitive" } } },
+        { leader: { regId: { contains: search, mode: "insensitive" } } },
       ],
     });
   }
   return and.length ? { AND: and } : {};
+}
+
+async function getProjectIdsForSession(session) {
+  const createdAt = sessionToCreatedAtRange(session);
+  if (!createdAt) return null;
+
+  const logs = await prisma.adminLog.findMany({
+    where: {
+      type: LogType.PROJECT_CREATION,
+      createdAt,
+    },
+    select: {
+      metadata: true,
+    },
+  });
+
+  const ids = [];
+  for (const log of logs) {
+    const value = log?.metadata?.projectId;
+    if (typeof value === "string" && value.length > 0) {
+      ids.push(value);
+    }
+  }
+  return ids;
 }
 
 // GET projects (paginated + server-side filters; default latest first by id)
@@ -59,6 +91,15 @@ export async function GET(req) {
     if (Number.isNaN(skip) || skip < 0) skip = 0;
 
     const where = buildWhere(url);
+    const session = (url.searchParams.get("session") || "").trim();
+    const sessionProjectIds = await getProjectIdsForSession(session);
+    if (Array.isArray(sessionProjectIds)) {
+      if (sessionProjectIds.length === 0) {
+        return new Response(JSON.stringify({ items: [], hasMore: false, totalCount: 0 }), { status: 200 });
+      }
+      if (!where.AND) where.AND = [];
+      where.AND.push({ id: { in: sessionProjectIds } });
+    }
 
     const rows = await prisma.project.findMany({
       where,
@@ -70,6 +111,7 @@ export async function GET(req) {
           select: {
             name: true,
             batch: true,
+            regId: true,
           },
         },
       },
@@ -77,13 +119,15 @@ export async function GET(req) {
 
     const hasMore = rows.length > take;
     const slice = hasMore ? rows.slice(0, take) : rows;
+    const totalCount = await prisma.project.count({ where });
     const items = slice.map((project) => ({
       ...project,
       leaderName: project.leader.name,
       leaderBatch: project.leader.batch,
+      leaderRegId: project.leader.regId,
     }));
 
-    return new Response(JSON.stringify({ items, hasMore }), { status: 200 });
+    return new Response(JSON.stringify({ items, hasMore, totalCount }), { status: 200 });
   } catch (error) {
     console.error("Error fetching projects:", error);
     return new Response(

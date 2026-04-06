@@ -12,7 +12,7 @@ import {
   Skeleton, Tooltip, useTheme, Dialog, DialogTitle, DialogContent, 
   DialogActions, IconButton, useMediaQuery, Divider, ListItem,
   List, ListItemText, ListItemSecondaryAction, Chip, DialogContentText,
-  SwipeableDrawer
+  SwipeableDrawer, Badge, InputAdornment
 } from "@mui/material";
 import { motion } from "framer-motion";
 import CloseIcon from '@mui/icons-material/Close';
@@ -22,20 +22,22 @@ import InfoIcon from '@mui/icons-material/Info';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import StarIcon from '@mui/icons-material/Star';
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 import { isSuperAdmin } from "@/lib/isSuperAdmin";
 
 const PAGE_SIZE = 20;
 
-function buildProjectListParams({ skip, debouncedSearch, debouncedLeader, filter }) {
+function buildProjectListParams({ skip, debouncedSearch, filter }) {
   const params = new URLSearchParams();
   params.set("take", String(PAGE_SIZE));
   params.set("skip", String(skip));
   const q = debouncedSearch.trim();
   if (q.length >= 2) params.set("search", q);
-  const l = debouncedLeader.trim();
-  if (l.length > 0) params.set("leader", l);
   if (filter.status) params.set("status", filter.status);
   if (filter.batch) params.set("batch", filter.batch);
+  if (filter.session) params.set("session", filter.session);
   return params;
 }
 
@@ -418,21 +420,23 @@ export default function AdminPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [projects, setProjects] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const firstAuthFetchDone = useRef(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [debouncedLeader, setDebouncedLeader] = useState("");
   const [loadingProjectId, setLoadingProjectId] = useState(null);
-  const [filter, setFilter] = useState({ leader: "", status: "", search: "", batch: "" });
+  const [appliedFilter, setAppliedFilter] = useState({ status: "", search: "", batch: "", session: "" });
+  const [draftFilter, setDraftFilter] = useState({ status: "", batch: "", session: "" });
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [error, setError] = useState("");
   const [selectedProjects, setSelectedProjects] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   
   // Mobile specific states
   const [detailsDialog, setDetailsDialog] = useState({ open: false, project: null });
@@ -449,31 +453,26 @@ export default function AdminPage() {
   const hasSpecialAccess = isSuperAdmin(session);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(filter.search), 350);
+    const t = setTimeout(() => setDebouncedSearch(appliedFilter.search), 350);
     return () => clearTimeout(t);
-  }, [filter.search]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedLeader(filter.leader), 350);
-    return () => clearTimeout(t);
-  }, [filter.leader]);
+  }, [appliedFilter.search]);
 
   const fetchFirstPage = useCallback(async () => {
     if (!session?.user?.id) return;
     const params = buildProjectListParams({
       skip: 0,
       debouncedSearch,
-      debouncedLeader,
-      filter,
+      filter: appliedFilter,
     });
     const response = await axios.get(`/api/admin/projects?${params}`, {
       headers: { Authorization: `Bearer ${session.user.id}` },
     });
     setProjects(response.data.items);
     setHasMore(response.data.hasMore);
+    setTotalCount(response.data.totalCount ?? response.data.items.length ?? 0);
     setSelectAll(false);
     setSelectedProjects([]);
-  }, [session?.user?.id, debouncedSearch, debouncedLeader, filter.status, filter.batch]);
+  }, [session?.user?.id, debouncedSearch, appliedFilter.status, appliedFilter.batch, appliedFilter.session]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -554,14 +553,14 @@ export default function AdminPage() {
       const params = buildProjectListParams({
         skip: projects.length,
         debouncedSearch,
-        debouncedLeader,
-        filter,
+        filter: appliedFilter,
       });
       const response = await axios.get(`/api/admin/projects?${params}`, {
         headers: { Authorization: `Bearer ${session.user.id}` },
       });
       setProjects((prev) => [...prev, ...response.data.items]);
       setHasMore(response.data.hasMore);
+      setTotalCount(response.data.totalCount ?? 0);
     } catch (error) {
       if (error.response && error.response.status === 403) {
         setForbidden(true);
@@ -578,8 +577,7 @@ export default function AdminPage() {
     loading,
     projects.length,
     debouncedSearch,
-    debouncedLeader,
-    filter,
+    appliedFilter,
   ]);
 
   const handleDeleteProject = async (projectId) => {
@@ -647,8 +645,37 @@ export default function AdminPage() {
   };
 
   const handleFilterChange = (e) => {
-    setFilter({ ...filter, [e.target.name]: e.target.value });
+    setDraftFilter((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  const clearSearch = () => setAppliedFilter((prev) => ({ ...prev, search: "" }));
+
+  const resetAllFilters = () => {
+    setAppliedFilter({ status: "", search: "", batch: "", session: "" });
+    setDraftFilter({ status: "", batch: "", session: "" });
+  };
+
+  const applyDrawerFilters = () => {
+    setAppliedFilter((prev) => ({
+      ...prev,
+      status: draftFilter.status,
+      batch: draftFilter.batch,
+      session: draftFilter.session,
+    }));
+    setFiltersOpen(false);
+  };
+
+  const openFilters = () => {
+    setDraftFilter({
+      status: appliedFilter.status,
+      batch: appliedFilter.batch,
+      session: appliedFilter.session,
+    });
+    setFiltersOpen(true);
+  };
+
+  const activeFilterCount =
+    (appliedFilter.status ? 1 : 0) + (appliedFilter.batch ? 1 : 0) + (appliedFilter.session ? 1 : 0);
   
   // Mobile specific handlers
   const handleRowClick = (e, project) => {
@@ -923,46 +950,168 @@ export default function AdminPage() {
         </Box>
 
         <Box sx={{ mb: 4 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              bgcolor: theme.palette.background.paper,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "stretch", sm: "center" },
+              }}
+            >
               <TextField
                 fullWidth
-                label="Search by Leader or Title"
+                label="Search (name / project title / regid)"
+                placeholder="Type at least 2 characters…"
                 variant="outlined"
-                value={filter.search}
+                value={appliedFilter.search}
                 name="search"
-                onChange={handleFilterChange}
+                onChange={(e) =>
+                  setAppliedFilter((prev) => ({ ...prev, search: e.target.value }))
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        {appliedFilter.search ? (
+                          <IconButton
+                            aria-label="Clear search"
+                            onClick={clearSearch}
+                            edge="end"
+                            size="small"
+                          >
+                            <ClearIcon fontSize="small" />
+                          </IconButton>
+                        ) : null}
+                        <Tooltip title="Filters">
+                          <IconButton
+                            aria-label="Open filters"
+                            onClick={openFilters}
+                            edge="end"
+                          >
+                            <Badge
+                              color="primary"
+                              badgeContent={activeFilterCount}
+                              invisible={activeFilterCount === 0}
+                            >
+                              <FilterAltIcon />
+                            </Badge>
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </InputAdornment>
+                  ),
+                }}
                 helperText={
-                  filter.search.trim().length === 1
+                  appliedFilter.search.trim().length === 1
                     ? "Type at least 2 characters to search"
-                    : undefined
+                    : activeFilterCount > 0
+                      ? "Filters are active"
+                      : " "
                 }
               />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            </Box>
+
+            {(appliedFilter.status || appliedFilter.batch || appliedFilter.session) && (
+              <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {appliedFilter.status && (
+                  <Chip
+                    label={`Status: ${appliedFilter.status}`}
+                    onDelete={() => {
+                      setAppliedFilter((p) => ({ ...p, status: "" }));
+                      setDraftFilter((p) => ({ ...p, status: "" }));
+                    }}
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
+                {appliedFilter.batch && (
+                  <Chip
+                    label={`Batch: ${appliedFilter.batch}`}
+                    onDelete={() => {
+                      setAppliedFilter((p) => ({ ...p, batch: "" }));
+                      setDraftFilter((p) => ({ ...p, batch: "" }));
+                    }}
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
+                {appliedFilter.session && (
+                  <Chip
+                    label={`Session: ${appliedFilter.session === "2025-2026-sem1" ? "2025-2026 (Sem 1)" : "2025-2026 (Sem 2)"}`}
+                    onDelete={() => {
+                      setAppliedFilter((p) => ({ ...p, session: "" }));
+                      setDraftFilter((p) => ({ ...p, session: "" }));
+                    }}
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
+                <Chip
+                  label="Reset"
+                  onClick={resetAllFilters}
+                  size="small"
+                  color="default"
+                  variant="filled"
+                />
+              </Box>
+            )}
+          </Paper>
+        </Box>
+
+        <SwipeableDrawer
+          anchor={isMobile ? "bottom" : "right"}
+          open={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          onOpen={() => setFiltersOpen(true)}
+          disableSwipeToOpen={!isMobile}
+          PaperProps={{
+            sx: {
+              borderTopLeftRadius: isMobile ? 16 : 0,
+              borderTopRightRadius: isMobile ? 16 : 0,
+              width: isMobile ? "100%" : 360,
+              p: 2,
+            },
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+            <Typography variant="h6" fontWeight={800}>
+              Filters
+            </Typography>
+            <IconButton aria-label="Close filters" onClick={() => setFiltersOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
+
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
-                <Select value={filter.status} label="Status" name="status" onChange={handleFilterChange}>
+                <Select value={draftFilter.status} label="Status" name="status" onChange={handleFilterChange}>
                   <MenuItem value="">All</MenuItem>
                   <MenuItem value="PARTIAL">Partial</MenuItem>
                   <MenuItem value="SUBMITTED">Submitted</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField
-                fullWidth
-                label="Filter by Leader"
-                variant="outlined"
-                value={filter.leader}
-                name="leader"
-                onChange={handleFilterChange}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+
+            <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Batch</InputLabel>
-                <Select value={filter.batch} label="Batch" name="batch" onChange={handleFilterChange}>
+                <Select value={draftFilter.batch} label="Batch" name="batch" onChange={handleFilterChange}>
                   <MenuItem value="">All Batches</MenuItem>
                   <MenuItem value="A1">A1</MenuItem>
                   <MenuItem value="A2">A2</MenuItem>
@@ -988,11 +1137,38 @@ export default function AdminPage() {
                   <MenuItem value="H1">H1</MenuItem>
                   <MenuItem value="H2">H2</MenuItem>
                   <MenuItem value="H3">H3</MenuItem>
+                  <MenuItem value="I1">I1</MenuItem>
+                  <MenuItem value="I2">I2</MenuItem>
+                  <MenuItem value="I3">I3</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Session</InputLabel>
+                <Select value={draftFilter.session} label="Session" name="session" onChange={handleFilterChange}>
+                  <MenuItem value="">All sessions</MenuItem>
+                  <MenuItem value="2025-2026-sem1">2025-2026 (Sem 1)</MenuItem>
+                  <MenuItem value="2025-2026-sem2">2025-2026 (Sem 2)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
           </Grid>
-        </Box>
+
+          <Box sx={{ display: "flex", gap: 1, mt: 3 }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => setDraftFilter({ status: "", batch: "", session: "" })}
+            >
+              Reset
+            </Button>
+            <Button fullWidth variant="contained" onClick={applyDrawerFilters}>
+              Apply
+            </Button>
+          </Box>
+        </SwipeableDrawer>
 
         {error && (
           <Typography color="error" sx={{ mb: 3 }}>
@@ -1010,15 +1186,23 @@ export default function AdminPage() {
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 1.5,
               mb: 2
             }}>
               <Typography variant="h6" fontWeight="bold">
                 Manage Projects
               </Typography>
-              
-              {/* Mobile selection mode actions */}
-              {isMobile && mobileSelectionMode && (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
+                <Chip
+                  label={`Total: ${totalCount}`}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                />
+                {/* Mobile selection mode actions */}
+                {isMobile && mobileSelectionMode && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography variant="body2" sx={{ mr: 1 }}>
                     {selectedProjects.length} selected
                   </Typography>
@@ -1030,7 +1214,8 @@ export default function AdminPage() {
                     Cancel
                   </Button>
                 </Box>
-              )}
+                )}
+              </Box>
             </Box>
             
             {/* Delete Selected button - show for desktop or mobile in selection mode */}
