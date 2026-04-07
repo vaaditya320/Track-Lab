@@ -3,6 +3,28 @@ import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
 import { resolveRegIdFromPoornimaEmailLocalPart } from "@/lib/poornimaRegId";
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeUserName(rawName, regId) {
+  const fallbackName = (rawName || "").trim();
+  if (!fallbackName) return "Unknown User";
+
+  const exactRegIdSuffix = regId
+    ? new RegExp(`\\s+${escapeRegExp(regId)}\\s*$`, "i")
+    : null;
+  const pietRegIdSuffix = /\s+PIET\d{2}[A-Z]{2,}\d{3}\s*$/i;
+
+  let cleanedName = fallbackName;
+  if (exactRegIdSuffix) {
+    cleanedName = cleanedName.replace(exactRegIdSuffix, "").trim();
+  }
+  cleanedName = cleanedName.replace(pietRegIdSuffix, "").trim();
+
+  return cleanedName || fallbackName;
+}
+
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -56,10 +78,11 @@ export const authOptions = {
           const regId = emailLower.endsWith("@poornima.org")
             ? resolveRegIdFromPoornimaEmailLocalPart(localPart)
             : localPart;
+          const cleanedName = normalizeUserName(user.name, regId);
 
           existingUser = await prisma.user.create({
             data: {
-              name: user.name,
+              name: cleanedName,
               email: user.email,
               regId,
             },
