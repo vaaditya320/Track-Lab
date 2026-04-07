@@ -309,6 +309,17 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
         
         <Button
           variant="outlined"
+          color="secondary"
+          fullWidth
+          onClick={() => {
+            router.push(`/admin/user-roles/${user.id}/edit`);
+            handleClose();
+          }}
+        >
+          Edit User
+        </Button>
+        <Button
+          variant="outlined"
           color="primary"
           fullWidth
           onClick={() => {
@@ -976,6 +987,18 @@ export default function AdminUsersPage() {
                               </FormControl>
                             )}
                             
+                            <Button
+                              variant="outlined"
+                              color="secondary"
+                              size="small"
+                              sx={{ mr: 1 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/admin/user-roles/${user.id}/edit`);
+                              }}
+                            >
+                              Edit
+                            </Button>
                             <Button
                               variant="outlined"
                               color="primary"

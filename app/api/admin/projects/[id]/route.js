@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { logAdminAction, LogType } from "@/lib/logger";
 import { isAdmin } from "@/lib/isAdmin";
+import { isSuperAdmin } from "@/lib/isSuperAdmin";
 import { NextResponse } from "next/server";
 
 export async function GET(req, { params }) {
@@ -35,13 +36,13 @@ export async function GET(req, { params }) {
 
 export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions);
-  if (!isAdmin(session)) {
+  if (!session || !isSuperAdmin(session)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
   try {
     const { title, teamMembers, components, summary, status, projectPhoto } = await req.json();
-    const projectId = params.id;
+    const projectId = await params.id;
 
     // Get project details before update for logging
     const projectBeforeUpdate = await prisma.project.findUnique({
@@ -83,7 +84,7 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions);
-  if (!isAdmin(session)) {
+  if (!session || !isSuperAdmin(session)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 

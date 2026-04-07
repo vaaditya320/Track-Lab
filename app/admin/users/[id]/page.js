@@ -148,6 +148,14 @@ export default function UserDetailsPage() {
         >
           Back to User List
         </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={() => router.push(`/admin/user-roles/${userId}/edit`)}
+          sx={{ mb: 3, ml: 1 }}
+        >
+          Edit User
+        </Button>
 
         <Card sx={{ 
           borderRadius: 3, 

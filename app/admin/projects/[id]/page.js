@@ -16,6 +16,7 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import GroupIcon from "@mui/icons-material/Group";
 import BuildIcon from "@mui/icons-material/Build";
 import ProjectPublicLinkButton from "@/app/components/ProjectPublicLinkButton";
+import { isSuperAdmin } from "@/lib/isSuperAdmin";
 
 // Skeleton component for loading state
 const ProjectDetailsSkeleton = () => {
@@ -218,6 +219,15 @@ export default function ProjectDetails() {
           </Button>
 
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "flex-end" }}>
+            {isSuperAdmin(session) && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={() => router.push(`/admin/project/${id}/edit`)}
+              >
+                Edit Project
+              </Button>
+            )}
             <ProjectPublicLinkButton projectId={id} />
             <Button
               variant="contained"

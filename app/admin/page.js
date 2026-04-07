@@ -325,27 +325,32 @@ const ProjectDetailsDialog = ({ open, project, onClose, onRequestDelete, loading
         justifyContent: 'space-between',
         p: 2
       }}>
-        <Button 
-          onClick={() => { onClose(); window.location.href = `/admin/projects/${project.id}`; }}
-          color="primary" 
-          variant="outlined"
-          size="small"
-        >
-          View Full Details
-        </Button>
-        <Button 
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            onRequestDelete(project);
-          }}
-          color="error" 
-          variant="contained"
-          size="small"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
-        >
-          Delete
-        </Button>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <Button
+            onClick={() => {
+              onClose();
+              window.location.href = `/admin/projects/${project.id}`;
+            }}
+            color="primary"
+            variant="outlined"
+            size="small"
+          >
+            View Full Details
+          </Button>
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestDelete(project);
+            }}
+            color="error"
+            variant="contained"
+            size="small"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+          >
+            Delete
+          </Button>
+        </Box>
       </DialogActions>
     </Dialog>
   );
