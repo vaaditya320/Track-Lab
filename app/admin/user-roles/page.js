@@ -18,6 +18,29 @@ import CloseIcon from "@mui/icons-material/Close";
 import { motion } from "framer-motion";
 
 const PAGE_SIZE = 20;
+const ROLE_OPTIONS = ["STUDENT", "TEACHER", "ADMIN"];
+
+const ROLE_UI = {
+  STUDENT: { label: "Student", color: "#26a69a" },
+  TEACHER: { label: "Teacher", color: "#42a5f5" },
+  ADMIN: { label: "Admin", color: "#ef5350" },
+};
+
+function getRolePillStyles(theme, role) {
+  const color = ROLE_UI[role]?.color || theme.palette.text.primary;
+  return {
+    px: 1.2,
+    py: 0.35,
+    borderRadius: 999,
+    fontWeight: 700,
+    fontSize: "0.78rem",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color,
+    border: `1px solid ${alpha(color, theme.palette.mode === "dark" ? 0.45 : 0.35)}`,
+    backgroundColor: alpha(color, theme.palette.mode === "dark" ? 0.16 : 0.12),
+  };
+}
 
 function buildUserListParams({ skip, debouncedSearch, debouncedEmail, filter }) {
   const params = new URLSearchParams();
@@ -233,47 +256,55 @@ const UserDetailsDialog = ({ open, handleClose, user, handleRoleChange, updating
               This role represents the highest level of authority in the system and cannot be modified
             </Typography>
           </Box>
-        ) : user.role === "STUDENT" ? (
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            onClick={() => handleRoleChange(user.id, "PROMOTE")}
-            disabled={updatingId === user.id}
-          >
-            {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Teacher"}
-          </Button>
-        ) : user.role === "TEACHER" ? (
-          <>
-            <Button
-              variant="contained"
-              color="success"
-              fullWidth
-              onClick={() => handleRoleChange(user.id, "PROMOTE")}
-              disabled={updatingId === user.id}
-            >
-              {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Admin"}
-            </Button>
-            <Button
-              variant="contained"
-              color="warning"
-              fullWidth
-              onClick={() => handleRoleChange(user.id, "DEMOTE")}
-              disabled={updatingId === user.id}
-            >
-              {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Student"}
-            </Button>
-          </>
         ) : (
-          <Button
-            variant="contained"
-            color="warning"
-            fullWidth
-            onClick={() => handleRoleChange(user.id, "DEMOTE")}
-            disabled={updatingId === user.id}
-          >
-            {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Teacher"}
-          </Button>
+          <Box sx={{ width: "100%" }}>
+            <Typography variant="subtitle2" color="textSecondary" sx={{ mb: 1 }}>
+              Change Role
+            </Typography>
+            <FormControl fullWidth size="small">
+              <InputLabel id="mobile-user-role-select">Assign Role</InputLabel>
+              <Select
+                labelId="mobile-user-role-select"
+                value={user.role}
+                label="Assign Role"
+                onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                disabled={updatingId === user.id}
+                renderValue={(value) => (
+                  <Box component="span" sx={getRolePillStyles(theme, value)}>
+                    {ROLE_UI[value]?.label || value}
+                  </Box>
+                )}
+                sx={{
+                  "& .MuiSelect-select": { display: "flex", alignItems: "center", py: 1.1 },
+                  "& fieldset": {
+                    borderColor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.45 : 0.3),
+                  },
+                }}
+              >
+                {ROLE_OPTIONS.map((role) => (
+                  <MenuItem key={role} value={role} sx={{ py: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.1 }}>
+                      <Box
+                        sx={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: "50%",
+                          backgroundColor: ROLE_UI[role].color,
+                          boxShadow: `0 0 0 3px ${alpha(ROLE_UI[role].color, 0.15)}`,
+                        }}
+                      />
+                      <Typography fontWeight={600}>{ROLE_UI[role].label}</Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {updatingId === user.id && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
+                <CircularProgress size={20} />
+              </Box>
+            )}
+          </Box>
         )}
         
         <Button
@@ -452,6 +483,7 @@ export default function AdminUsersPage() {
   const router = useRouter();
 
   const [users, setUsers] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -492,6 +524,7 @@ export default function AdminUsersPage() {
       headers: { Authorization: `Bearer ${session.user.id}` },
     });
     setUsers(response.data.items);
+    setTotalCount(response.data.totalCount ?? response.data.items.length);
     setHasMore(response.data.hasMore);
   }, [session?.user?.id, debouncedSearch, debouncedEmail, filter.role]);
 
@@ -501,6 +534,7 @@ export default function AdminUsersPage() {
     if (status !== "authenticated" || !session?.user?.id) {
       firstAuthFetchDone.current = false;
       setUsers([]);
+      setTotalCount(0);
       setHasMore(false);
       setInitialLoading(false);
       setAdminChecked(true);
@@ -580,6 +614,7 @@ export default function AdminUsersPage() {
         headers: { Authorization: `Bearer ${session.user.id}` },
       });
       setUsers((prev) => [...prev, ...response.data.items]);
+      setTotalCount(response.data.totalCount ?? users.length + response.data.items.length);
       setHasMore(response.data.hasMore);
     } catch (error) {
       const unauthorized =
@@ -605,48 +640,43 @@ export default function AdminUsersPage() {
   ]);
 
   // Handle Promote/Demote
-  async function handleRoleChange(id, action) {
+  async function handleRoleChange(id, nextRole) {
     try {
       setUpdatingId(id);
-      let newRole;
       
-      // Get current user's role
       const currentUser = users.find(user => user.id === id);
       if (!currentUser) {
         throw new Error("User not found");
       }
 
-      // Determine new role based on current role and action
-      switch (currentUser.role) {
-        case "STUDENT":
-          newRole = "TEACHER";
-          break;
-        case "TEACHER":
-          newRole = action === "PROMOTE" ? "ADMIN" : "STUDENT";
-          break;
-        case "ADMIN":
-          newRole = "TEACHER";
-          break;
-        default:
-          throw new Error("Invalid role");
+      if (currentUser.role === "SUPER_ADMIN") {
+        throw new Error("SUPER_ADMIN role cannot be changed");
       }
 
-      await axios.put(`/api/admin/users`, { userId: id, role: newRole });
+      if (!ROLE_OPTIONS.includes(nextRole)) {
+        throw new Error("Invalid role");
+      }
+
+      if (currentUser.role === nextRole) {
+        return;
+      }
+
+      await axios.put(`/api/admin/users`, { userId: id, role: nextRole });
       
       // Update users list
       const updatedUsers = users.map(user => 
-        user.id === id ? { ...user, role: newRole } : user
+        user.id === id ? { ...user, role: nextRole } : user
       );
       setUsers(updatedUsers);
       
       // Update selectedUser if it's the same user
       if (selectedUser && selectedUser.id === id) {
-        setSelectedUser({ ...selectedUser, role: newRole });
+        setSelectedUser({ ...selectedUser, role: nextRole });
       }
       
       setToast({
         open: true,
-        message: `User role updated to ${newRole}`,
+        message: `User role updated to ${nextRole}`,
         severity: "success"
       });
     } catch (error) {
@@ -819,6 +849,9 @@ export default function AdminUsersPage() {
               <Typography component="div" variant="h6" fontWeight="bold">
                 Manage Users
               </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Showing {users.length} of {totalCount} users
+              </Typography>
               
               <Button
                 variant="contained"
@@ -901,63 +934,46 @@ export default function AdminUsersPage() {
                                   ⭐ Supreme Authority
                                 </Typography>
                               </Box>
-                            ) : user.role === "STUDENT" ? (
-                              <Button
-                                variant="contained"
-                                color="success"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRoleChange(user.id, "PROMOTE");
-                                }}
-                                disabled={updatingId === user.id}
-                                sx={{ mr: 1 }}
-                              >
-                                {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Teacher"}
-                              </Button>
-                            ) : user.role === "TEACHER" ? (
-                              <>
-                                <Button
-                                  variant="contained"
-                                  color="success"
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRoleChange(user.id, "PROMOTE");
-                                  }}
-                                  disabled={updatingId === user.id}
-                                  sx={{ mr: 1 }}
-                                >
-                                  {updatingId === user.id ? <CircularProgress size={20} /> : "Promote to Admin"}
-                                </Button>
-                                <Button
-                                  variant="contained"
-                                  color="warning"
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRoleChange(user.id, "DEMOTE");
-                                  }}
-                                  disabled={updatingId === user.id}
-                                  sx={{ mr: 1 }}
-                                >
-                                  {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Student"}
-                                </Button>
-                              </>
                             ) : (
-                              <Button
-                                variant="contained"
-                                color="warning"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRoleChange(user.id, "DEMOTE");
-                                }}
-                                disabled={updatingId === user.id}
-                                sx={{ mr: 1 }}
-                              >
-                                {updatingId === user.id ? <CircularProgress size={20} /> : "Demote to Teacher"}
-                              </Button>
+                              <FormControl size="small" sx={{ minWidth: 170, mr: 1 }}>
+                                <InputLabel id={`desktop-role-select-${user.id}`}>Role</InputLabel>
+                                <Select
+                                  labelId={`desktop-role-select-${user.id}`}
+                                  value={user.role}
+                                  label="Role"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                                  disabled={updatingId === user.id}
+                                  renderValue={(value) => (
+                                    <Box component="span" sx={getRolePillStyles(theme, value)}>
+                                      {ROLE_UI[value]?.label || value}
+                                    </Box>
+                                  )}
+                                  sx={{
+                                    "& .MuiSelect-select": { display: "flex", alignItems: "center", py: 1 },
+                                    "& fieldset": {
+                                      borderColor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.45 : 0.3),
+                                    },
+                                  }}
+                                >
+                                  {ROLE_OPTIONS.map((role) => (
+                                    <MenuItem key={role} value={role} sx={{ py: 1 }}>
+                                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.1 }}>
+                                        <Box
+                                          sx={{
+                                            width: 9,
+                                            height: 9,
+                                            borderRadius: "50%",
+                                            backgroundColor: ROLE_UI[role].color,
+                                            boxShadow: `0 0 0 3px ${alpha(ROLE_UI[role].color, 0.15)}`,
+                                          }}
+                                        />
+                                        <Typography fontWeight={600}>{ROLE_UI[role].label}</Typography>
+                                      </Box>
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
                             )}
                             
                             <Button

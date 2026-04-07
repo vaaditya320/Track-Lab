@@ -53,22 +53,25 @@ export async function GET(request) {
 
     const where = buildWhere(url);
 
-    const rows = await prisma.user.findMany({
-      where,
-      skip,
-      take: take + 1,
-      orderBy: { id: "desc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        regId: true,
-        role: true,
-        branch: true,
-        section: true,
-        batch: true,
-      },
-    });
+    const [totalCount, rows] = await prisma.$transaction([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        skip,
+        take: take + 1,
+        orderBy: { id: "desc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          regId: true,
+          role: true,
+          branch: true,
+          section: true,
+          batch: true,
+        },
+      }),
+    ]);
 
     const hasMore = rows.length > take;
     const items = hasMore ? rows.slice(0, take) : rows;
@@ -81,7 +84,7 @@ export async function GET(request) {
       );
     }
 
-    return NextResponse.json({ items, hasMore });
+    return NextResponse.json({ items, hasMore, totalCount });
   } catch (error) {
     console.error("Error fetching users:", error);
     return NextResponse.json(
