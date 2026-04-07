@@ -855,7 +855,7 @@ function EnhancedFooter() {
                 &copy; {currentYear} TrackLab. All rights reserved.
               </Typography>
               <Link
-                href="https://vaadi.site"
+                href="https://vaadii.in/"
                 target="_blank"
                 style={{ 
                   color: "currentColor", 
