@@ -19,6 +19,12 @@ const s3 = new S3Client({
 
 const BUCKET_NAME = "cache-buster";
 const FOLDER_NAME = "tracklab-project-reports/";
+const sanitizeS3Segment = (value, fallback = "unknown") => {
+  const raw = value == null ? "" : String(value);
+  const cleaned = raw.normalize("NFKC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  const safe = cleaned.replace(/\s+/g, "_").replace(/[^\w.-]/g, "_");
+  return safe || fallback;
+};
 
 // Check if PDF exists in S3
 async function checkIfPdfExists(s3Key) {
@@ -81,6 +87,22 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const createSafePdfText = (pdfFont) => (value, fallback = "") => {
+      const raw = value == null ? "" : String(value);
+      const normalized = raw.normalize("NFKC").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+      if (!normalized) return fallback;
+      let safe = "";
+      for (const ch of normalized) {
+        try {
+          pdfFont.encodeText(ch);
+          safe += ch;
+        } catch {
+          safe += "?";
+        }
+      }
+      return safe || fallback;
+    };
+    const safeText = createSafePdfText(font);
     
     // Theme color and style
     const themeColor = rgb(54/255, 78/255, 210/255);
@@ -173,7 +195,7 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     drawSectionTitle("Project Title", textY);
     textY -= 22;
     // Draw Project Title in a box
-    const titleText = project.title || "Untitled Project";
+    const titleText = safeText(project.title, "Untitled Project");
     const titleTextWidth = font.widthOfTextAtSize(titleText, 15);
     const titleBoxPaddingX = 18;
     const titleBoxHeight = 36;
@@ -213,7 +235,7 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     drawSectionTitle("Project Leader", textY);
     textY -= 22;
     // Draw Project Leader in a box
-    const leaderText = project.leader?.name || leaderName || "Unknown Leader";
+    const leaderText = safeText(project.leader?.name || leaderName, "Unknown Leader");
     const leaderTextWidth = font.widthOfTextAtSize(leaderText, 15);
     const leaderBoxPaddingX = 18;
     const leaderBoxHeight = 36;
@@ -277,7 +299,7 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     for (let row = 0; row < gridRows; row++) {
       for (let col = 0; col < gridCols; col++) {
         const idx = row * gridCols + col;
-        const name = memberBoxes[idx] || "";
+        const name = safeText(memberBoxes[idx] || "");
         const boxX = gridStartX + col * (gridBoxWidth + gridBoxSpacingX);
         const boxY = gridStartY - row * (gridBoxHeight + gridBoxSpacingY);
         // Lighter shadow
@@ -320,7 +342,7 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     textY -= 26;
     // Status pill: rounded, outlined, theme color border and text, centered
     let statusColor = sectionTitleTextColor;
-    const status = project.status || "UNKNOWN";
+    const status = safeText(project.status, "UNKNOWN");
     const pillWidth = 120;
     const pillHeight = 32;
     const pillX = marginX;
@@ -347,7 +369,10 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     drawSectionTitle("Components", textY);
     textY -= 18;
     // Components box with all components, word wrap, multi-column (max 3 columns, up to 30 items)
-    const components = (project.components || "").split(',').map(c => c.trim()).filter(Boolean);
+    const components = (project.components || "")
+      .split(',')
+      .map((c) => safeText(c.trim()))
+      .filter(Boolean);
     const compBoxX = marginX;
     const compBoxY = textY;
     const compBoxWidth = width - 2 * marginX;
@@ -374,7 +399,7 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     });
     // List components inside box, up to 3 columns, all visible
     const maxCols = 3;
-    const colCount = Math.min(maxCols, Math.ceil(components.length / 10));
+    const colCount = Math.max(1, Math.min(maxCols, Math.ceil(components.length / 10)));
     const colWidth = (compBoxWidth - 30) / colCount;
     const rowHeightComp = 18;
     const maxRows = Math.ceil(components.length / colCount);
@@ -479,7 +504,7 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
       });
       
       // Draw summary text with word wrapping
-      const summaryText = project.summary || "No summary provided";
+      const summaryText = safeText(project.summary, "No summary provided");
       const words = summaryText.split(' ');
       let currentLine = '';
       let summaryY = secondPageY - 20;
@@ -586,7 +611,9 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
     }
     // Save PDF in memory and upload to S3
     const pdfBytes = await pdfDoc.save();
-    const s3Key = `${FOLDER_NAME}${leaderName?.replace(/\s+/g, "_") || "unknown_leader"}-${project.status}-project-${project.id}.pdf`;
+    const safeLeaderFileSegment = sanitizeS3Segment(safeText(leaderName), "unknown_leader");
+    const safeStatusFileSegment = sanitizeS3Segment(safeText(project.status), "UNKNOWN");
+    const s3Key = `${FOLDER_NAME}${safeLeaderFileSegment}-${safeStatusFileSegment}-project-${project.id}.pdf`;
     const uploadParams = {
       Bucket: BUCKET_NAME,
       Key: s3Key,
@@ -738,7 +765,9 @@ export async function GET(req, { params }) {
     const leaderName = project.leader?.name; // Use optional chaining
     if (!leaderName) console.warn(`Leader name not found for project ID ${project.id}`); // Log warning if leader name is missing
 
-    const s3Key = `${FOLDER_NAME}${leaderName?.replace(/\s+/g, "_") || "unknown_leader"}-${project.status}-project-${project.id}.pdf`; // Handle missing leaderName in s3Key
+    const s3Leader = sanitizeS3Segment(leaderName, "unknown_leader");
+    const s3Status = sanitizeS3Segment(project.status, "UNKNOWN");
+    const s3Key = `${FOLDER_NAME}${s3Leader}-${s3Status}-project-${project.id}.pdf`;
 
     let pdfBuffer;
 
