@@ -13,7 +13,7 @@ export async function GET(req, { params }) {
   }
 
   try {
-    const projectId = params.id;
+    const projectId = await params.id;
 
     // Fetch project by ID and include the related leader (user) data
     const project = await prisma.project.findUnique({

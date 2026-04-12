@@ -5,8 +5,9 @@ import {
   canViewStudentProject,
   getProjectAccess,
 } from "@/lib/projectAccess";
+import { isAdmin } from "@/lib/isAdmin";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { Buffer } from "buffer";
 
 const s3 = new S3Client({
@@ -18,42 +19,12 @@ const s3 = new S3Client({
 });
 
 const BUCKET_NAME = "cache-buster";
-const FOLDER_NAME = "tracklab-project-reports/";
-const sanitizeS3Segment = (value, fallback = "unknown") => {
+const sanitizeFilenameSegment = (value, fallback = "unknown") => {
   const raw = value == null ? "" : String(value);
   const cleaned = raw.normalize("NFKC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
   const safe = cleaned.replace(/\s+/g, "_").replace(/[^\w.-]/g, "_");
   return safe || fallback;
 };
-
-// Check if PDF exists in S3
-async function checkIfPdfExists(s3Key) {
-  try {
-    await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
-    return true;
-  } catch (error) {
-    if (error.name === "NotFound") return false;
-    console.error("Error checking PDF in S3:", error);
-    throw new Error("Failed to check PDF existence");
-  }
-}
-
-// Fetch PDF from S3
-async function fetchPdfFromS3(s3Key) {
-  try {
-    const { Body } = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }));
-
-    return new Promise((resolve, reject) => {
-      const chunks = [];
-      Body.on("data", (chunk) => chunks.push(chunk));
-      Body.on("end", () => resolve(Buffer.concat(chunks)));
-      Body.on("error", reject);
-    });
-  } catch (error) {
-    console.error("Error fetching PDF from S3:", error);
-    throw new Error("Failed to fetch PDF from S3");
-  }
-}
 
 // Fetch project image from S3
 async function fetchImageFromS3(s3Key) {
@@ -79,8 +50,8 @@ async function fetchImageFromS3(s3Key) {
   }
 }
 
-// Generate PDF and upload to S3
-async function generateAndUploadPDF(project, leaderName, sessionUser) {
+// Generate PDF in memory (project photos may still be read from S3)
+async function generateProjectPdfBuffer(project, leaderName, sessionUser) {
   try {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595, 842]); // A4 size
@@ -609,27 +580,16 @@ async function generateAndUploadPDF(project, leaderName, sessionUser) {
         color: rgb(1, 1, 1)
       });
     }
-    // Save PDF in memory and upload to S3
     const pdfBytes = await pdfDoc.save();
-    const safeLeaderFileSegment = sanitizeS3Segment(safeText(leaderName), "unknown_leader");
-    const safeStatusFileSegment = sanitizeS3Segment(safeText(project.status), "UNKNOWN");
-    const s3Key = `${FOLDER_NAME}${safeLeaderFileSegment}-${safeStatusFileSegment}-project-${project.id}.pdf`;
-    const uploadParams = {
-      Bucket: BUCKET_NAME,
-      Key: s3Key,
-      Body: Buffer.from(pdfBytes),
-      ContentType: "application/pdf",
-    };
-    await s3.send(new PutObjectCommand(uploadParams));
-    return s3Key;
+    return Buffer.from(pdfBytes);
   } catch (error) {
-    console.error("Error generating and uploading PDF:", error);
-    throw new Error("Failed to generate or upload PDF");
+    console.error("Error generating PDF:", error);
+    throw new Error("Failed to generate PDF");
   }
 }
 
 // Send email with PDF attachment and HTML body
-async function sendEmailWithPDF(userEmail, pdfBuffer, s3Key, project) {
+async function sendEmailWithPDF(userEmail, pdfBuffer, attachmentFileName, project) {
   try {
     if (!process.env.BREVO_API_KEY) {
       throw new Error("BREVO_API_KEY is not configured");
@@ -700,7 +660,7 @@ async function sendEmailWithPDF(userEmail, pdfBuffer, s3Key, project) {
             htmlContent: htmlBody,
             attachment: [
               {
-                name: `${s3Key.split("/").pop()}`,
+                name: attachmentFileName,
                 content: Buffer.isBuffer(pdfBuffer) ? pdfBuffer.toString("base64") : pdfBuffer,
               },
             ],
@@ -757,7 +717,9 @@ export async function GET(req, { params }) {
     }
 
     const access = getProjectAccess(project, session.user.id);
-    if (!canViewStudentProject(access)) {
+    const canDownload =
+      canViewStudentProject(access) || isAdmin(session);
+    if (!canDownload) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
     }
 
@@ -765,24 +727,12 @@ export async function GET(req, { params }) {
     const leaderName = project.leader?.name; // Use optional chaining
     if (!leaderName) console.warn(`Leader name not found for project ID ${project.id}`); // Log warning if leader name is missing
 
-    const s3Leader = sanitizeS3Segment(leaderName, "unknown_leader");
-    const s3Status = sanitizeS3Segment(project.status, "UNKNOWN");
-    const s3Key = `${FOLDER_NAME}${s3Leader}-${s3Status}-project-${project.id}.pdf`;
+    const pdfBuffer = await generateProjectPdfBuffer(project, leaderName, session.user);
+    const safeLeader = sanitizeFilenameSegment(leaderName, "unknown_leader");
+    const safeStatus = sanitizeFilenameSegment(project.status, "UNKNOWN");
+    const attachmentFileName = `${safeLeader}-${safeStatus}-project-${project.id}.pdf`;
 
-    let pdfBuffer;
-
-    if (await checkIfPdfExists(s3Key)) {
-      console.log("PDF already exists. Fetching from S3...");
-      pdfBuffer = await fetchPdfFromS3(s3Key);
-    } else {
-      console.log("PDF not found. Generating new PDF...");
-      // Pass project object to generateAndUploadPDF
-      await generateAndUploadPDF(project, leaderName, session.user);
-      pdfBuffer = await fetchPdfFromS3(s3Key);
-    }
-
-    // Pass project object to sendEmailWithPDF
-    await sendEmailWithPDF(session.user.email, pdfBuffer, s3Key, project);
+    await sendEmailWithPDF(session.user.email, pdfBuffer, attachmentFileName, project);
 
     return new Response(JSON.stringify({ message: "PDF sent to your email" }), { status: 200 });
   } catch (error) {
