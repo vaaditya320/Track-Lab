@@ -1145,6 +1145,9 @@ export default function AdminPage() {
                   <MenuItem value="I1">I1</MenuItem>
                   <MenuItem value="I2">I2</MenuItem>
                   <MenuItem value="I3">I3</MenuItem>
+                  <MenuItem value="J1">J1</MenuItem>
+                  <MenuItem value="J2">J2</MenuItem>
+                  <MenuItem value="J3">J3</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
