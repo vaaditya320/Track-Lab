@@ -654,7 +654,7 @@ async function sendEmailWithPDF(userEmail, pdfBuffer, attachmentFileName, projec
             accept: "application/json",
           },
           body: JSON.stringify({
-            sender: { email: process.env.EMAIL_FROM },
+            sender: { email: process.env.EMAIL_FROM, name: "TrackLab" },
             to: [{ email: userEmail }],
             subject: `Project Report for ${project.title || "Untitled Project"}`,
             htmlContent: htmlBody,
