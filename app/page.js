@@ -524,9 +524,20 @@ export default function Home() {
     setLoadingProjectId(projectId);
 
     try {
-      const response = await axios.get(`/api/projects/${projectId}/download`);
+      const response = await axios.get(`/api/projects/${projectId}/download`, {
+        responseType: "blob",
+      });
       if (response.status === 200) {
-        setToast({ open: true, message: "The project summary has been emailed to you.", severity: "success" });
+        const url = URL.createObjectURL(response.data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = response.headers["content-disposition"]?.match(/filename="([^"]+)"/)?.[1]
+          || `project-${projectId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setToast({ open: true, message: "Project summary download started.", severity: "success" });
       } else {
         throw new Error("Download failed");
       }

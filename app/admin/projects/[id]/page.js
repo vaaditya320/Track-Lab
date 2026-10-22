@@ -113,11 +113,22 @@ export default function ProjectDetails() {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const response = await axios.get(`/api/projects/${id}/download`);
+      const response = await axios.get(`/api/projects/${id}/download`, {
+        responseType: "blob",
+      });
       if (response.status === 200) {
+        const url = URL.createObjectURL(response.data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = response.headers["content-disposition"]?.match(/filename="([^"]+)"/)?.[1]
+          || `project-${id}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
         setToast({ 
           open: true, 
-          message: "The project summary has been emailed to you.", 
+          message: "Project summary download started.",
           severity: "success" 
         });
       } else {

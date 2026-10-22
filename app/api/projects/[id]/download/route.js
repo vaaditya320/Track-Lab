@@ -589,6 +589,7 @@ async function generateProjectPdfBuffer(project, leaderName, sessionUser) {
 }
 
 // Send email with PDF attachment and HTML body
+/* Email delivery is disabled in favor of direct browser downloads.
 async function sendEmailWithPDF(userEmail, pdfBuffer, attachmentFileName, project) {
   try {
     if (!process.env.BREVO_API_KEY) {
@@ -692,6 +693,8 @@ async function sendEmailWithPDF(userEmail, pdfBuffer, attachmentFileName, projec
   }
 }
 
+*/
+
 // API Route
 export async function GET(req, { params }) {
   try {
@@ -732,9 +735,16 @@ export async function GET(req, { params }) {
     const safeStatus = sanitizeFilenameSegment(project.status, "UNKNOWN");
     const attachmentFileName = `${safeLeader}-${safeStatus}-project-${project.id}.pdf`;
 
-    await sendEmailWithPDF(session.user.email, pdfBuffer, attachmentFileName, project);
+    // await sendEmailWithPDF(session.user.email, pdfBuffer, attachmentFileName, project);
 
-    return new Response(JSON.stringify({ message: "PDF sent to your email" }), { status: 200 });
+    return new Response(pdfBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${attachmentFileName}"`,
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (error) {
     console.error("Error processing request:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
