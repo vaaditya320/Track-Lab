@@ -22,6 +22,47 @@ datasource db {
 
 Prisma CLI commands (`migrate`, `generate`, `studio`, etc.) and the application at runtime both rely on this variable when connecting.
 
+### Connection pool limit
+
+Both `prisma` and `@prisma/client` are locked to **6.3.0** (`^6.3.0` in
+`package.json`). With the existing `prisma-client-js` generator and PostgreSQL
+datasource, configure a maximum of **2 connections per shared Prisma client** using
+the Prisma 6 URL parameter `connection_limit=2`:
+
+```bash
+DATABASE_URL="postgresql://<username>:<password>@<host>:<port>/<database>?sslmode=require&connection_limit=2"
+```
+
+Update the existing URL in your local `.env` and in each deployment's environment
+or secret configuration. Append `&connection_limit=2` when a query string already
+exists, or `?connection_limit=2` otherwise. If `connection_limit` is already present,
+replace its value with `2` rather than adding a duplicate. Keep the existing URL,
+credentials (including percent encoding), SSL settings, and every other query
+parameter unchanged. The URL is passed directly to Prisma through
+`env("DATABASE_URL")`; there is no application URL builder to update.
+
+`lib/prisma.js` exports one shared client and caches it on the global object in
+development so hot reload reuses its pool. Keep database access through that module.
+No Prisma constructor pool option or schema change is needed. See the
+[Prisma 6 connection pool documentation](https://www.prisma.io/docs/orm/v6/prisma-client/setup-and-configuration/databases-connections/connection-pool).
+
+The checked-in Docker deployment uses Next.js standalone output and starts a
+persistent Node.js process with `node server.js`; `npm start` also runs a persistent
+Next.js server. Docker Compose reads `.env` and forwards `${DATABASE_URL}` unchanged;
+an exported shell variable can override the `.env` value during interpolation, so
+update that source too if used. Recreate the app container after changing the URL
+(`docker compose up -d --force-recreate app`). For other hosts, update the runtime
+environment and restart or redeploy every application instance so it gets a new pool.
+
+This is a per-client pool ceiling, not a global database limit or a reservation of
+two connections. With one shared client per process, N running processes can use up
+to 2 × N connections. Replicas, workers, overlapping deployments, and serverless
+function instances each have their own pools; development caching does not share
+connections between processes. Serverless deployments must set the same URL parameter
+for every function environment and budget instance concurrency accordingly. Allow
+additional database capacity for migrations, administration, and other services;
+use deployment concurrency limits or an external pooler when a global budget is needed.
+
 ### Generator
 
 ```prisma

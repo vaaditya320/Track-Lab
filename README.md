@@ -31,7 +31,7 @@ Inside the project root, create a `.env` file and add your credentials:
 # Environment Variables (.env.example)
 
 ## Database
-DATABASE_URL=postgres://<username>:<password>@<host>:<port>/<database>?sslmode=require
+DATABASE_URL=postgres://<username>:<password>@<host>:<port>/<database>?sslmode=require&connection_limit=2
 
 ## App Configuration
 BASE_URL=http://localhost:3000
@@ -60,6 +60,10 @@ BREVO_API_KEY=<your_brevo_api_key>
 ## Feature Flags
 IS_DOWN=false
 ```
+
+For an existing installation, update your existing `DATABASE_URL` as described in
+[Database connection pooling](DATABASE.md#connection-pool-limit). Preserve credentials,
+SSL settings, and all other query parameters; apply the change in production as well.
 
 ### 3. Install dependencies
 
